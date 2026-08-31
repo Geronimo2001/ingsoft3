@@ -1,16 +1,18 @@
-# dependencias y artefactos de build
-node_modules/
-bin/
-obj/
-dist/
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+**/.vite/
 build/
-
-# secretos: NUNCA se versionan
-.env
+.dotnet/
+.dotnet-home/
+*.user
+*.tsbuildinfo
 *.local
-
-# basura del sistema operativo y del editor
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
+frontend/.env
+backend/.env
+ingsoft3-tp01/
