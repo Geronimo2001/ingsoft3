@@ -1,4 +1,4 @@
-# Decisiones TP2
+# Decisiones 
 
 ## App elegida
 Control de productos, stock y proveedores.
