@@ -17,7 +17,10 @@ public class ProductsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<List<ProductDto>>> GetAll([FromQuery] string? search, [FromQuery] bool lowStock = false)
+    public async Task<ActionResult<List<ProductDto>>> GetAll(
+        [FromQuery] string? search,
+        [FromQuery] bool lowStock = false,
+        [FromQuery] int? supplierId = null)
     {
         var query = _db.Products.Include(p => p.Supplier).AsQueryable();
 
@@ -30,6 +33,11 @@ public class ProductsController : ControllerBase
         if (lowStock)
         {
             query = query.Where(p => p.CurrentStock <= p.MinimumStock);
+        }
+
+        if (supplierId.HasValue)
+        {
+            query = query.Where(p => p.SupplierId == supplierId.Value);
         }
 
         var products = await query
