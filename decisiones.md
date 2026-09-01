@@ -1,5 +1,71 @@
 # Decisiones 
 
+## Resolución del conflicto
+
+El conflicto apareció porque dos ramas diferentes modificaron la misma línea
+del archivo `README.md`.
+
+Git pudo detectar que existían dos versiones distintas, pero no podía decidir
+automáticamente cuál de las dos era la correcta, ya que esa decisión depende
+del significado del contenido y no solamente de una comparación técnica.
+
+Para resolverlo fue necesario revisar ambas versiones, elegir manualmente
+qué contenido debía quedar y eliminar los marcadores de conflicto.
+
+El conflicto podría haberse evitado manteniendo las ramas actualizadas con
+`main`, integrando cambios con mayor frecuencia o evitando que dos cambios
+modifiquen simultáneamente la misma parte del archivo. En un proyecto real,
+las ramas cortas y los cambios pequeños reducen este tipo de problemas.
+
+## Problemas encontrados
+
+Uno de los principales problemas durante el TP fue el manejo de las ramas.
+Al repetir algunas partes del ejercicio terminé creando más ramas de las
+necesarias, por ejemplo distintas versiones de las ramas utilizadas para
+modificar el título del README.
+
+Esto me ayudó a entender mejor que una rama de feature debería ser temporal:
+se crea desde `main`, se realiza el cambio, se abre un Pull Request, se
+mergea y luego se elimina.
+
+También aprendí que después de realizar un merge en GitHub es importante
+actualizar la copia local de `main` antes de comenzar una nueva rama, para
+evitar trabajar sobre una versión desactualizada del repositorio.
+
+Otro error fue dejar algunas ramas existentes después de haber mergeado sus
+Pull Requests. Luego revisé cuáles ya habían sido integradas y podían
+eliminarse sin perder cambios.
+
+## Estrategia de integración
+
+Los cambios se incorporaron a `main` mediante Pull Requests en lugar de
+realizar pushes directos.
+
+Se utilizó `Squash and merge` para que los cambios realizados dentro de una
+rama queden representados como un único commit en `main`, manteniendo un
+historial más simple y legible.
+
+Una vez integrada una rama, ésta deja de ser necesaria y puede eliminarse.
+
+## Versionado
+
+Al finalizar el práctico se utilizó versionado semántico para identificar la
+primera versión estable del repositorio mediante el tag:
+
+`v1.0.0`
+
+El tag identifica un commit concreto del historial, mientras que la Release
+permite presentar esa versión de forma visible dentro de GitHub.
+
+## Uso de IA
+
+Utilicé inteligencia artificial principalmente como apoyo para entender el
+funcionamiento de Git y GitHub, interpretar algunos errores y saber cómo
+continuar cuando tuve problemas con ramas, merges y conflictos.
+
+Las acciones propuestas fueron verificadas revisando el estado del
+repositorio, los Pull Requests y el historial de GitHub antes de continuar.
+
 ## App elegida
 Control de productos, stock y proveedores.
 
