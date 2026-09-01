@@ -16,3 +16,4 @@ Thumbs.db
 frontend/.env
 backend/.env
 ingsoft3-tp01/
+.env

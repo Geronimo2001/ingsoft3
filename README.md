@@ -7,6 +7,64 @@ MVP con React + TypeScript + Vite, ASP.NET Core Web API .NET 8, PostgreSQL y Ent
 - Node.js 20 o superior.
 - .NET SDK 8.
 - PostgreSQL en ejecucion.
+- Docker, si se ejecuta con Docker Compose.
+
+## Ejecutar en una maquina limpia con Docker
+
+Desde la raiz del proyecto:
+
+```bash
+cp .env.example .env
+```
+
+Revisar que `.env` tenga los valores para PostgreSQL:
+
+```env
+POSTGRES_DB=stock_control
+POSTGRES_USER=stock_user
+POSTGRES_PASSWORD=stock_password_change_me
+```
+
+### Opcion 1: construir las imagenes desde el codigo
+
+Esta opcion usa `docker-compose.yml`. Docker construye las imagenes locales de frontend y backend, y descarga la imagen de PostgreSQL si no existe.
+
+```bash
+docker compose up --build
+```
+
+### Opcion 2: usar las imagenes publicadas en el registry
+
+Esta opcion usa `docker-compose.registry.yml`. Docker descarga las imagenes publicadas de frontend y backend desde GitHub Container Registry.
+
+```bash
+docker compose -f docker-compose.registry.yml pull
+docker compose -f docker-compose.registry.yml up
+```
+
+El `pull` es opcional porque `docker compose up` tambien descarga las imagenes si no estan en la maquina. Se deja separado para mostrar explicitamente que se estan bajando desde el registry.
+
+Abrir la aplicacion en el navegador:
+
+```text
+http://localhost:3000
+```
+
+Para cortar la ejecucion, presionar `Ctrl+C`.
+
+Para bajar los contenedores:
+
+```bash
+docker compose down
+```
+
+Para bajar los contenedores y borrar tambien los datos de la base:
+
+```bash
+docker compose down -v
+```
+
+Con este modo solo hace falta tener Docker instalado. No es necesario instalar Node.js, .NET SDK ni PostgreSQL manualmente.
 
 ## Base de datos
 
