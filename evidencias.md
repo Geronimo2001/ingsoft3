@@ -1,3 +1,46 @@
+## 1. Protección de la rama main
+
+Se configuró la rama `main` para que los cambios no puedan ingresar directamente
+y deban realizarse mediante Pull Request.
+
+Al intentar realizar un push directo a `main`, GitHub rechazó la operación,
+comprobando que la protección estaba funcionando correctamente.
+
+
+---
+
+## 2. Conflicto entre dos ramas
+
+Para probar el manejo de conflictos se crearon dos ramas que modificaban
+la misma línea del archivo `README.md`.
+
+Luego de integrar una de las ramas a `main`, GitHub detectó que la segunda
+rama ya no podía mergearse automáticamente porque ambas versiones
+modificaban el mismo contenido.
+
+
+---
+
+## 3. Resolución del conflicto
+
+GitHub mostró los marcadores del conflicto indicando las dos versiones
+posibles del contenido.
+
+Se revisaron ambas versiones, se decidió qué contenido conservar y se
+eliminaron los marcadores del conflicto antes de completar el merge.
+
+
+---
+
+## 4. Tag y Release v1.0.0
+
+Una vez terminado el flujo de trabajo se creó el tag `v1.0.0` sobre
+la rama `main` y se publicó la primera Release del proyecto.
+
+Esto permite identificar de forma inmutable qué estado del repositorio
+corresponde a esa versión.
+
+
 
 ## Consistencia de datos con volumenes+ docker compose  up
 <img width="943" height="446" alt="Captura de pantalla 2026-08-31 a la(s) 12 48 39 p  m" src="https://github.com/user-attachments/assets/0b727274-b597-4c58-8517-3c74c36d2ef9" />
