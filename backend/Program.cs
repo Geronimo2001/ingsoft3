@@ -46,6 +46,7 @@ var app = builder.Build();
 
 app.UseCors("Frontend");
 app.MapControllers();
+app.MapGet("/health", () => Results.Ok(new { status = "Healthy" }));
 
 using (var scope = app.Services.CreateScope())
 {
@@ -110,5 +111,3 @@ static string? FindFileInCurrentOrParent(string relativePath)
 
     return null;
 }
-using NoExiste;// TODO: endpoint de salud
-using NoExiste;
