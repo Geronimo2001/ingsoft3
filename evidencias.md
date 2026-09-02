@@ -51,3 +51,19 @@ corresponde a esa versión.
 ## Packages
 <img width="1512" height="982" alt="Captura de pantalla 2026-08-31 a la(s) 1 15 58 p  m" src="https://github.com/user-attachments/assets/6ad187a4-59aa-45c2-b550-e0fad506809e" />
 <img width="1512" height="982" alt="Captura de pantalla 2026-08-31 a la(s) 1 16 02 p  m" src="https://github.com/user-attachments/assets/73cf4dff-92ab-4234-b8ea-e292c606d96f" />
+
+
+
+## Pipelines 
+## Bloqueo
+<img width="1512" height="982" alt="Captura de pantalla 2026-09-02 a la(s) 7 57 27 p  m" src="https://github.com/user-attachments/assets/6c267770-88d2-436b-91a0-713b5c5133ba" />
+## arreglado
+<img width="1320" height="632" alt="Captura de pantalla 2026-09-02 a la(s) 8 06 25 p  m" src="https://github.com/user-attachments/assets/018b33cb-4e98-47c5-85f3-fdf359960bdc" />
+
+##segundo PR donde te pide update
+<img width="1104" height="625" alt="Captura de pantalla 2026-09-02 a la(s) 8 14 59 p  m" src="https://github.com/user-attachments/assets/1e9ef9c5-1335-40a2-8897-3c2dde87e381" />
+
+
+
+
+
