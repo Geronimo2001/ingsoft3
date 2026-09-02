@@ -152,4 +152,5 @@ npm run build
 - CRUD de proveedores y vista de productos asociados.
 - Mensajes claros de exito y error en la interfaz.
 
+[![CI](https://github.com/Geronimo2001/ingsoft3/actions/workflows/ci.yml/badge.svg)](https://github.com/Geronimo2001/ingsoft3/actions/workflows/ci.yml)
 
