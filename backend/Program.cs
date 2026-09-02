@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using StockControl.Api.Data;
 using StockControl.Api.Services;
 using System.Text.Json.Serialization;
+using NoExiste;//  TODO: endpoint de salud
 
 LoadDotEnv();
 
@@ -46,7 +47,6 @@ var app = builder.Build();
 
 app.UseCors("Frontend");
 app.MapControllers();
-app.MapGet("/health", () => Results.Ok(new { status = "Healthy" }));
 
 using (var scope = app.Services.CreateScope())
 {
