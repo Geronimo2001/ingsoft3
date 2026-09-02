@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using StockControl.Api.Data;
 using StockControl.Api.Services;
 using System.Text.Json.Serialization;
+using NoExiste;
 
 LoadDotEnv();
 
