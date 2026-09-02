@@ -121,3 +121,35 @@ y Testable.
 Este TP no presento mayores problemas ya que se hizo todo por web.
 ## Uso de IA
 Lo use cuando no encontraba ciertas cosas en github, porque estaban con otro nombre, o directamente no los busque de manera correcta
+
+# Decisiones — TP4 CI
+
+## Estructura del pipeline
+
+Se separó el pipeline en dos jobs: `build-backend` y `build-frontend`.
+
+Se ejecutan en paralelo porque son independientes. Así se reduce el tiempo total y también es más fácil identificar qué parte falla.
+
+## Caché
+
+Se configuró caché en el frontend para reutilizar capas de Docker, especialmente la instalación de dependencias.
+
+Si la caché desaparece, el pipeline sigue funcionando, pero tarda más porque debe reconstruir todo.
+
+En el backend no se configuró caché persistente en GitHub Actions.
+
+## Uso de Dockerfile
+
+El pipeline construye usando los Dockerfiles del frontend y backend para validar exactamente la misma forma en que se construye la aplicación.
+
+Así se evita que el proyecto compile de una manera en CI pero falle al generar la imagen Docker.
+
+## Problemas encontrados
+
+Durante el TP tuve algunos problemas con ramas y Pull Requests. En un momento seguí trabajando sobre una rama cuyo PR ya había sido mergeado, y también creé una rama desde un `main` desactualizado.
+
+Además, durante la prueba del gate hice commits por error sobre `main` local.
+
+Se solucionó sincronizando `main`, recreando las ramas correctamente y verificando el historial antes de hacer push.
+
+Para probar el gate agregué a propósito `using NoExiste;` en el backend. El job del backend falló y el frontend siguió en verde. Después eliminé el error, hice otro push y ambos checks pasaron correctamente.
