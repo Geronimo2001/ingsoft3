@@ -1,4 +1,4 @@
-name: CI
+
 
 on:
   pull_request:
@@ -47,3 +47,4 @@ jobs:
           tags: frontend:ci
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
+
