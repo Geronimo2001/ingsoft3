@@ -151,3 +151,5 @@ npm run build
 - Validacion para impedir salidas mayores al stock disponible.
 - CRUD de proveedores y vista de productos asociados.
 - Mensajes claros de exito y error en la interfaz.
+
+
