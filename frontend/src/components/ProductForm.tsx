@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { canSaveProduct, initialProductForm, updateProductField } from '../lib/productForm';
 import type { Product, ProductRequest, Supplier } from '../types';
 
 type ProductFormProps = {
@@ -8,30 +9,12 @@ type ProductFormProps = {
   onCancel: () => void;
 };
 
-const emptyProduct: ProductRequest = {
-  name: '',
-  sku: '',
-  category: '',
-  currentStock: 0,
-  minimumStock: 0,
-  price: 0,
-  supplierId: 0
-};
-
 export function ProductForm({ suppliers, product, onSubmit, onCancel }: ProductFormProps) {
-  const [form, setForm] = useState<ProductRequest>(() => ({
-    ...emptyProduct,
-    ...product,
-    supplierId: product?.supplierId ?? suppliers[0]?.id ?? 0
-  }));
+  const [form, setForm] = useState<ProductRequest>(() => initialProductForm(suppliers, product));
   const [saving, setSaving] = useState(false);
 
   const updateField = (name: keyof ProductRequest, value: string) => {
-    const numericFields = ['currentStock', 'minimumStock', 'price', 'supplierId'];
-    setForm((current) => ({
-      ...current,
-      [name]: numericFields.includes(name) ? Number(value) : value
-    }));
+    setForm((current) => updateProductField(current, name, value));
   };
 
   const handleSubmit = async (event: FormEvent) => {
@@ -107,7 +90,7 @@ export function ProductForm({ suppliers, product, onSubmit, onCancel }: ProductF
         <button type="button" className="secondary" onClick={onCancel}>
           Cancelar
         </button>
-        <button type="submit" disabled={saving || suppliers.length === 0}>
+        <button type="submit" disabled={!canSaveProduct(saving, suppliers.length)}>
           {saving ? 'Guardando...' : 'Guardar'}
         </button>
       </div>

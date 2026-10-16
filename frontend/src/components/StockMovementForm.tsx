@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { prepareStockMovement } from '../lib/stockMovements';
 import type { Product, StockMovementRequest, StockMovementType } from '../types';
 
 type StockMovementFormProps = {
@@ -17,12 +18,7 @@ export function StockMovementForm({ product, onSubmit, onCancel }: StockMovement
     event.preventDefault();
     setSaving(true);
     try {
-      await onSubmit({
-        productId: product.id,
-        type,
-        quantity,
-        description: description.trim() || undefined
-      });
+      await onSubmit(prepareStockMovement(product.id, type, quantity, description));
     } finally {
       setSaving(false);
     }

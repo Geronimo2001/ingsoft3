@@ -4,6 +4,7 @@ import { Modal } from '../components/Modal';
 import { ProductForm } from '../components/ProductForm';
 import { StockMovementForm } from '../components/StockMovementForm';
 import { api } from '../services/api';
+import { deleteAfterConfirmation } from '../lib/deletion';
 import type { Product, ProductRequest, StockMovementRequest, Supplier } from '../types';
 
 const money = new Intl.NumberFormat('es-AR', {
@@ -76,12 +77,13 @@ export function ProductsPage() {
   };
 
   const deleteProduct = async (product: Product) => {
-    const confirmed = window.confirm(`Eliminar el producto "${product.name}"?`);
-    if (!confirmed) return;
-
-    setError('');
     try {
-      await api.deleteProduct(product.id);
+      const deleted = await deleteAfterConfirmation(
+        `Eliminar el producto "${product.name}"?`,
+        (message) => window.confirm(message),
+        async () => { setError(''); await api.deleteProduct(product.id); }
+      );
+      if (!deleted) return;
       setMessage('Producto eliminado.');
       await loadProducts();
     } catch (err) {

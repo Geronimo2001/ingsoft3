@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StockControl.Api.Data;
+using StockControl.Api.Domain;
 using StockControl.Api.Models;
 
 namespace StockControl.Api.Controllers;
@@ -22,23 +23,8 @@ public class ProductsController : ControllerBase
         [FromQuery] bool lowStock = false,
         [FromQuery] int? supplierId = null)
     {
-        var query = _db.Products.Include(p => p.Supplier).AsQueryable();
-
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var term = search.Trim().ToLower();
-            query = query.Where(p => p.Name.ToLower().Contains(term) || p.Sku.ToLower().Contains(term));
-        }
-
-        if (lowStock)
-        {
-            query = query.Where(p => p.CurrentStock <= p.MinimumStock);
-        }
-
-        if (supplierId.HasValue)
-        {
-            query = query.Where(p => p.SupplierId == supplierId.Value);
-        }
+        var query = _db.Products.Include(p => p.Supplier)
+            .Where(ProductRules.Filter(search, lowStock, supplierId));
 
         var products = await query
             .OrderBy(p => p.Name)
@@ -68,7 +54,7 @@ public class ProductsController : ControllerBase
             return BadRequest(new ApiError(error));
         }
 
-        var skuExists = await _db.Products.AnyAsync(p => p.Sku.ToLower() == request.Sku.Trim().ToLower());
+        var skuExists = await _db.Products.AnyAsync(ProductRules.DuplicateSku(request.Sku));
         if (skuExists)
         {
             return Conflict(new ApiError("Ya existe un producto con ese SKU."));
@@ -99,8 +85,7 @@ public class ProductsController : ControllerBase
             return BadRequest(new ApiError(error));
         }
 
-        var skuExists = await _db.Products.AnyAsync(p =>
-            p.Id != id && p.Sku.ToLower() == request.Sku.Trim().ToLower());
+        var skuExists = await _db.Products.AnyAsync(ProductRules.DuplicateSku(request.Sku, id));
 
         if (skuExists)
         {
@@ -131,33 +116,11 @@ public class ProductsController : ControllerBase
 
     private async Task<string?> ValidateProductRequest(ProductRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Name))
-        {
-            return "El nombre es obligatorio.";
-        }
-
-        if (string.IsNullOrWhiteSpace(request.Sku))
-        {
-            return "El SKU es obligatorio.";
-        }
-
-        if (string.IsNullOrWhiteSpace(request.Category))
-        {
-            return "La categoria es obligatoria.";
-        }
-
-        if (request.CurrentStock < 0 || request.MinimumStock < 0)
-        {
-            return "El stock no puede ser negativo.";
-        }
-
-        if (request.Price < 0)
-        {
-            return "El precio no puede ser negativo.";
-        }
+        var error = ProductRules.ValidateFields(request);
+        if (error is not null) return error;
 
         var supplierExists = await _db.Suppliers.AnyAsync(s => s.Id == request.SupplierId);
-        return supplierExists ? null : "El proveedor seleccionado no existe.";
+        return ProductRules.ValidateSupplier(supplierExists);
     }
 
     private static void ApplyRequest(Product product, ProductRequest request)

@@ -34,6 +34,7 @@ builder.Services.AddControllers()
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(GetRequiredConnectionString(builder.Configuration)));
 builder.Services.AddScoped<StockService>();
+builder.Services.AddScoped<IStockRepository, StockRepository>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>

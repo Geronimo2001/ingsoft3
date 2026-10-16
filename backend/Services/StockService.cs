@@ -1,16 +1,14 @@
-using Microsoft.EntityFrameworkCore;
-using StockControl.Api.Data;
 using StockControl.Api.Models;
 
 namespace StockControl.Api.Services;
 
 public class StockService
 {
-    private readonly AppDbContext _db;
+    private readonly IStockRepository _repository;
 
-    public StockService(AppDbContext db)
+    public StockService(IStockRepository repository)
     {
-        _db = db;
+        _repository = repository;
     }
 
     public async Task<(StockMovement? Movement, string? Error)> RegisterMovementAsync(StockMovementRequest request)
@@ -20,7 +18,7 @@ public class StockService
             return (null, "La cantidad debe ser mayor a cero.");
         }
 
-        var product = await _db.Products.FirstOrDefaultAsync(p => p.Id == request.ProductId);
+        var product = await _repository.FindProductAsync(request.ProductId);
         if (product is null)
         {
             return (null, "El producto no existe.");
@@ -45,8 +43,7 @@ public class StockService
             Description = request.Description
         };
 
-        _db.StockMovements.Add(movement);
-        await _db.SaveChangesAsync();
+        await _repository.SaveMovementAsync(movement);
 
         return (movement, null);
     }

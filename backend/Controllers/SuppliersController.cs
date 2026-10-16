@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StockControl.Api.Data;
+using StockControl.Api.Domain;
 using StockControl.Api.Models;
 
 namespace StockControl.Api.Controllers;
@@ -43,7 +44,7 @@ public class SuppliersController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<SupplierDto>> Create(SupplierRequest request)
     {
-        var error = ValidateSupplierRequest(request);
+        var error = SupplierRules.Validate(request);
         if (error is not null)
         {
             return BadRequest(new ApiError(error));
@@ -67,7 +68,7 @@ public class SuppliersController : ControllerBase
             return NotFound(new ApiError("El proveedor no existe."));
         }
 
-        var error = ValidateSupplierRequest(request);
+        var error = SupplierRules.Validate(request);
         if (error is not null)
         {
             return BadRequest(new ApiError(error));
@@ -91,7 +92,7 @@ public class SuppliersController : ControllerBase
             return NotFound(new ApiError("El proveedor no existe."));
         }
 
-        if (supplier.Products.Count > 0)
+        if (!SupplierRules.CanDelete(supplier))
         {
             return Conflict(new ApiError("No se puede eliminar un proveedor con productos asociados."));
         }
@@ -100,21 +101,6 @@ public class SuppliersController : ControllerBase
         await _db.SaveChangesAsync();
 
         return NoContent();
-    }
-
-    private static string? ValidateSupplierRequest(SupplierRequest request)
-    {
-        if (string.IsNullOrWhiteSpace(request.Name))
-        {
-            return "El nombre es obligatorio.";
-        }
-
-        if (!string.IsNullOrWhiteSpace(request.Email) && !request.Email.Contains('@'))
-        {
-            return "El email no tiene un formato valido.";
-        }
-
-        return null;
     }
 
     private static void ApplyRequest(Supplier supplier, SupplierRequest request)

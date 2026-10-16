@@ -25,6 +25,40 @@ jobs:
           push: false                 # todavía no publicamos la imagen en ningún lado
           tags: backend:ci            # el nombre de la imagen (hoy sólo vive dentro del runner)
 
+      - name: Construir la etapa de tests del backend
+        uses: docker/build-push-action@v7
+        with:
+          context: ./backend
+          target: test
+          load: true
+          tags: backend-test:ci
+
+      - name: Ejecutar tests y exigir cobertura del backend
+        id: tests
+        run: |
+          mkdir -p TestResults/backend
+          docker run --rm -v "$PWD/TestResults/backend:/out" backend-test:ci
+
+      - name: Mostrar resumen de cobertura del backend
+        if: ${{ !cancelled() && (steps.tests.outcome == 'success' || steps.tests.outcome == 'failure') }}
+        run: python3 scripts/coverage-summary.py backend TestResults/backend/coverage.cobertura.xml
+
+      - name: Generar reporte HTML del backend
+        if: ${{ !cancelled() && (steps.tests.outcome == 'success' || steps.tests.outcome == 'failure') }}
+        run: |
+          docker run --rm --entrypoint /tools/reportgenerator \
+            -v "$PWD/TestResults/backend:/out" backend-test:ci \
+            -reports:/out/coverage.cobertura.xml -targetdir:/out/html \
+            -sourcedirs:/src -reporttypes:Html
+
+      - name: Publicar reportes del backend
+        if: ${{ !cancelled() && (steps.tests.outcome == 'success' || steps.tests.outcome == 'failure') }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-tests-coverage
+          path: TestResults/backend/
+          if-no-files-found: error
+
   build-frontend:
     runs-on: ubuntu-latest
     steps:
@@ -47,4 +81,31 @@ jobs:
           tags: frontend:ci
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
+
+      - name: Construir la etapa de tests del frontend
+        uses: docker/build-push-action@v7
+        with:
+          context: ./frontend
+          target: test
+          load: true
+          tags: frontend-test:ci
+          cache-from: type=gha,scope=frontend
+
+      - name: Ejecutar tests y exigir cobertura del frontend
+        id: tests
+        run: |
+          mkdir -p TestResults/frontend
+          docker run --rm -v "$PWD/TestResults/frontend:/out" frontend-test:ci
+
+      - name: Mostrar resumen de cobertura del frontend
+        if: ${{ !cancelled() && (steps.tests.outcome == 'success' || steps.tests.outcome == 'failure') }}
+        run: python3 scripts/coverage-summary.py frontend TestResults/frontend/coverage/cobertura-coverage.xml
+
+      - name: Publicar reportes del frontend
+        if: ${{ !cancelled() && (steps.tests.outcome == 'success' || steps.tests.outcome == 'failure') }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-tests-coverage
+          path: TestResults/frontend/
+          if-no-files-found: error
 
