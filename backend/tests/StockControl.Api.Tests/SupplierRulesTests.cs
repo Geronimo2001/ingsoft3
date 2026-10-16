@@ -6,6 +6,21 @@ namespace StockControl.Api.Tests;
 
 public class SupplierRulesTests
 {
+    [Theory]
+    [InlineData("")]
+    [InlineData("ventas@example.com")]
+    public void ProveedorValido_AceptaEmailOpcional(string email)
+    {
+        var request = new SupplierRequest("Papelera", "", "", email);
+        Assert.Null(SupplierRules.Validate(request));
+    }
+
+    [Fact]
+    public void ProveedorSinProductos_SePuedeEliminar()
+    {
+        Assert.True(SupplierRules.CanDelete(new Supplier()));
+    }
+
     [Fact]
     public void ProveedorSinNombre_SeRechaza()
     {

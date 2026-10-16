@@ -22,6 +22,7 @@ public class ProductRulesTests
     [Theory]
     [InlineData(-1, 0, 0, "El stock no puede ser negativo.")]
     [InlineData(0, 0, -1, "El precio no puede ser negativo.")]
+    [InlineData(0, -1, 0, "El stock no puede ser negativo.")]
     public void ValoresNegativos_SeRechazan(int stock, int minimum, int price, string expected)
     {
         var request = Valid with { CurrentStock = stock, MinimumStock = minimum, Price = price };
@@ -51,4 +52,43 @@ public class ProductRulesTests
         Assert.Equal(expected, duplicates);
     }
 
+    [Theory]
+    [InlineData(3, 5, 2)]
+    [InlineData(5, 5, 0)]
+    [InlineData(7, 5, 0)]
+    [InlineData(0, 0, 0)]
+    public void Reposicion_CalculaSoloLasUnidadesFaltantes(int stock, int minimum, int expected)
+    {
+        var units = ProductRules.UnitsToRestock(stock, minimum);
+        Assert.Equal(expected, units);
+    }
+
+    [Fact]
+    public void ProductoValido_SeAceptaConProveedorExistente()
+    {
+        Assert.Null(ProductRules.ValidateFields(Valid));
+        Assert.Null(ProductRules.ValidateSupplier(true));
+    }
+
+    [Theory]
+    [InlineData(null, false, null, true)]
+    [InlineData("  resma  ", false, null, true)]
+    [InlineData(" RES-A4 ", false, null, true)]
+    [InlineData("otro", false, null, false)]
+    [InlineData(null, true, null, true)]
+    [InlineData(null, false, 2, true)]
+    [InlineData(null, false, 3, false)]
+    public void Filtro_RespetaBusquedaStockYProveedor(string? search, bool lowStock, int? supplierId, bool expected)
+    {
+        var product = new Product { Name = "Resma", Sku = "RES-A4", CurrentStock = 5, MinimumStock = 5, SupplierId = 2 };
+        var filter = ProductRules.Filter(search, lowStock, supplierId).Compile();
+        Assert.Equal(expected, filter(product));
+    }
+
+    [Fact]
+    public void FiltroStockBajo_ExcluyeProductosPorEncimaDelMinimo()
+    {
+        var product = new Product { CurrentStock = 6, MinimumStock = 5 };
+        Assert.False(ProductRules.Filter(null, true, null).Compile()(product));
+    }
 }

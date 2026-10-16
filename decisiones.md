@@ -194,8 +194,9 @@ solicite un guardado. En frontend usamos Vitest en Node, sin DOM. El formulario
 consume las funciones probadas de `lib`; `createApi(fetcher, baseUrl)` recibe un
 `vi.fn()` en tests y usa el cliente real en producción. No llamamos a la red.
 
-La suite actual tiene **14 métodos de backend y 22 casos ejecutados**, y **7 tests
-escritos de frontend y 8 casos ejecutados**. Hay parametrización, errores, bordes y
+La suite ampliada después del rojo tiene **22 métodos de backend y 42 casos ejecutados**, y **12 tests
+escritos de frontend y 20 casos ejecutados**. El estado rojo tenía 14 métodos/22 casos
+de backend y 7 tests/8 casos de frontend. Hay parametrización, errores, bordes y
 mocks en los dos proyectos. AAA significa preparar datos y dependencias, ejecutar
 el comportamiento y verificar el resultado; no contamos cada dato de una teoría
 como un método nuevo.
@@ -236,7 +237,7 @@ Los archivos y esos comportamientos siguen dentro del alcance, aunque algunos
 ahora no estén cubiertos o no tengan una verificación específica. No recortamos
 producción, filtros de cobertura ni umbrales para compensarlo. Este cambio deja
 huecos conocidos y reduce la suite. Las dos ejecuciones locales ya fallan por
-cobertura; la demostración del PR rojo sigue pendiente. La regla nueva sin tests
+cobertura; el PR rojo ya está registrado más abajo. La regla nueva inicialmente sin tests
 se describe en la sección de PR y evidencias.
 
 ## Alcance de cobertura: lógica de negocio y cliente API
@@ -308,7 +309,25 @@ compilación de producción y los mismos 22 casos de backend pasando. La cobertu
 del backend queda en 64,58 % de líneas (62/96) y 68,18 % de ramas (30/44):
 el comando termina con error únicamente por ambos mínimos de 80 %. La regla nueva
 no tiene líneas ni ramas cubiertas. El frontend no cambió y conserva los valores
-de la tabla anterior. Éste es el estado preparado para abrir el primer PR rojo.
+de la tabla anterior. Éste es el estado con el que abrimos el primer PR rojo.
+
+Después de guardar esa evidencia ampliamos solo los tests, manteniendo producción,
+alcance y umbrales. `UnitsToRestock` queda verificado con stock inferior, igual y
+superior al mínimo, y el caso cero/cero. Recuperamos los cálculos y el inventario
+vacío del dashboard, los filtros por nombre/SKU/stock/proveedor, la aceptación
+de productos y proveedores válidos, la eliminación permitida y el estado disponible.
+En frontend cubrimos confirmación de borrado, conversión numérica y de texto,
+guardado según estado/proveedores, edición sin perder proveedor, respuesta 204,
+envío JSON, filtro de stock bajo y errores sin mensaje o sin JSON válido.
+
+La comprobación local y en las etapas de tests de Docker pasa los dos gates:
+backend 89,58 % de líneas (86/96) y
+93,18 % de ramas (41/44), con 42 casos pasando; frontend 78,37 % de líneas
+(29/37) y 100 % de ramas (38/38), con 20 casos pasando. No pretendemos cubrir
+todas las operaciones de la API ni el detalle del DTO de proveedor: siguen en el
+denominador aunque no tengan pruebas específicas. El verde de GitHub aún requiere
+el push y una nueva corrida del mismo PR #31. Ambas compilaciones de producción
+también finalizaron correctamente en Docker.
 
 Los 22 casos de backend y los 8 de frontend pasan, pero ambos comandos de
 cobertura fallan por líneas y por ramas. Antes del recorte, el mismo alcance tenía 100 % de líneas y ramas.
@@ -337,7 +356,8 @@ JSON `{}`; debe usarse `Ocurrio un error inesperado.`.
 Inicialmente agregamos el caso porque un backend o proxy puede devolver un
 error sin el campo esperado. Con el recorte a nueve tests del frontend retiramos
 esa prueba y la dejamos pendiente, conservando el comportamiento en el alcance.
-La decisión actual es no reponerla hasta que acordemos la siguiente ampliación.
+Después de guardar el rojo la repusimos en la ampliación de la suite: el caso
+HTTP 503 con `{}` ahora verifica explícitamente ese mensaje alternativo.
 Las tres partes del ejercicio quedan documentadas: línea, entrada concreta y
 decisión. Es una rama de código, no una rama de Git.
 
@@ -431,23 +451,34 @@ La dejamos sin pruebas en el primer estado del PR y cubriremos sus caminos y
 el borde de igualdad después de guardar la evidencia roja. La cobertura ya era
 insuficiente antes de agregarla: no atribuimos toda la caída a este método.
 
-Trabajamos en `feature/tp5-testing`. Los siguientes pasos esperan indicación del
-estudiante: hacer
-commit/push y abrir el primer PR. El primer PR incluirá esa preparación y el
-código nuevo sin tests dentro del alcance
-medido. Debe compilar, pasar los tests y fallar por cobertura. Guardaremos su
-corrida roja y comprobaremos el bloqueo antes de agregar los tests que faltan en
-ese mismo PR. Repondremos las pruebas retiradas que correspondan y cubriremos
-los caminos del código nuevo después de guardar el rojo y antes del merge.
+Abrimos el [PR 1 #31](https://github.com/Geronimo2001/ingsoft3/pull/31), de
+`feature/tp5-testing` hacia `main`, con la preparación del pipeline y la regla
+nueva sin tests. La [corrida roja 38924460266](https://github.com/Geronimo2001/ingsoft3/actions/runs/38924460266)
+confirma que ambas imágenes se construyeron correctamente y pasaron todos los
+tests (22 backend y 8 frontend). Fallaron exclusivamente los umbrales:
+
+- [build-backend](https://github.com/Geronimo2001/ingsoft3/actions/runs/38924460266/job/117052349935?pr=31):
+  64,58 % de líneas y 68,18 % de ramas, contra 80 % en ambas métricas.
+- [build-frontend](https://github.com/Geronimo2001/ingsoft3/actions/runs/38924460266/job/117052349728):
+  64,86 % de líneas contra 70 % y 71,05 % de ramas contra 75 %.
+
+Los pasos de resumen, generación de HTML del backend y publicación de reportes
+de ambos proyectos finalizaron correctamente a pesar del rojo. Consultamos el
+PR y GitHub informa `OPEN` y `mergeStateStatus=BLOCKED`. La revisión de la
+configuración concreta de required checks sigue pendiente.
+
+Con confirmación del estudiante agregamos los tests faltantes en la misma rama,
+incluidos los caminos del código nuevo. Pasan localmente sin cambiar el gate.
+El siguiente paso es commit/push al mismo PR y comprobar la nueva corrida verde.
 Después vendrán verde y merge autorizado. El segundo PR saldrá de
 `main` actualizado y quedará abierto y rojo hasta la defensa. Ambos checks del
 TP4 deben estar configurados como obligatorios; todavía falta comprobarlo.
 
-Faltan estos cuatro enlaces reales, que agregaremos junto a sus explicaciones:
+Estado de los cuatro enlaces de entrega:
 
-1. Corrida con resumen y reporte descargable: pendiente.
-2. Corrida roja por el umbral, con porcentaje y mínimo en el log: pendiente.
-3. Primer PR con la secuencia rojo → tests → verde → merge: pendiente.
+1. [Corrida con summaries y publicación de reportes](https://github.com/Geronimo2001/ingsoft3/actions/runs/38924460266): pasos exitosos; falta comprobar la descarga y el contenido de los artifacts.
+2. [Corrida roja por el umbral](https://github.com/Geronimo2001/ingsoft3/actions/runs/38924460266): porcentajes y mínimos comprobados en los logs.
+3. [Primer PR #31](https://github.com/Geronimo2001/ingsoft3/pull/31): estado rojo registrado; faltan tests → verde → merge.
 4. Segundo PR abierto y rojo: pendiente.
 
 Los enlaces serán a corridas y PR concretos, no a las pestañas generales. Las

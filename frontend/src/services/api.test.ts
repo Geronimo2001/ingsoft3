@@ -2,6 +2,33 @@ import { describe, expect, it, vi } from 'vitest';
 import { createApi } from './api';
 
 describe('cliente API', () => {
+  it('envía el movimiento como JSON y acepta una respuesta sin contenido', async () => {
+    const movement = { productId: 7, type: 'Entrada' as const, quantity: 2 };
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 204 }));
+    const api = createApi(fetchMock, 'http://api.test');
+    await expect(api.registerMovement(movement)).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledExactlyOnceWith('http://api.test/stock-movements', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(movement)
+    });
+  });
+
+  it('envía el filtro de stock bajo aunque no haya búsqueda', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response('[]'));
+    await createApi(fetchMock, 'http://api.test').getProducts('', true);
+    expect(fetchMock).toHaveBeenCalledExactlyOnceWith('http://api.test/products?lowStock=true', {
+      method: 'GET', headers: undefined, body: undefined
+    });
+  });
+
+  it.each([
+    ['{}', '', 'Ocurrio un error inesperado.'],
+    ['no es JSON', 'Service Unavailable', 'Service Unavailable'],
+    ['no es JSON', '', 'Ocurrio un error inesperado.']
+  ])('resuelve el error sin mensaje útil: %s / %s', async (body, statusText, expected) => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(body, { status: 503, statusText }));
+    await expect(createApi(fetchMock).getDashboard()).rejects.toThrow(expected);
+  });
+
   it('sin búsqueda útil no envía parámetros vacíos', async () => {
     const search = '   ';
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response('[]'));
