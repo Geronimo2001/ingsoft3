@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StockControl.Api.Data;
+using StockControl.Api.Domain;
 using StockControl.Api.Models;
 
 namespace StockControl.Api.Controllers;
@@ -21,19 +22,7 @@ public class DashboardController : ControllerBase
     {
         var products = await _db.Products.Include(p => p.Supplier).ToListAsync();
         var totalSuppliers = await _db.Suppliers.CountAsync();
-        var lowStock = products
-            .Where(p => p.CurrentStock <= p.MinimumStock)
-            .OrderBy(p => p.CurrentStock - p.MinimumStock)
-            .Take(5)
-            .Select(p => p.ToDto())
-            .ToList();
-
-        var dashboard = new DashboardDto(
-            products.Count,
-            totalSuppliers,
-            products.Count(p => p.CurrentStock <= p.MinimumStock),
-            products.Sum(p => p.CurrentStock * p.Price),
-            lowStock);
+        var dashboard = InventorySummary.Create(products, totalSuppliers);
 
         return Ok(dashboard);
     }

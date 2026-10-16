@@ -3,6 +3,7 @@ import { Message } from '../components/Message';
 import { Modal } from '../components/Modal';
 import { SupplierForm } from '../components/SupplierForm';
 import { api } from '../services/api';
+import { deleteAfterConfirmation } from '../lib/deletion';
 import type { Supplier, SupplierRequest } from '../types';
 
 export function SuppliersPage() {
@@ -45,12 +46,13 @@ export function SuppliersPage() {
   };
 
   const deleteSupplier = async (supplier: Supplier) => {
-    const confirmed = window.confirm(`Eliminar el proveedor "${supplier.name}"?`);
-    if (!confirmed) return;
-
-    setError('');
     try {
-      await api.deleteSupplier(supplier.id);
+      const deleted = await deleteAfterConfirmation(
+        `Eliminar el proveedor "${supplier.name}"?`,
+        (message) => window.confirm(message),
+        async () => { setError(''); await api.deleteSupplier(supplier.id); }
+      );
+      if (!deleted) return;
       setMessage('Proveedor eliminado.');
       await loadSuppliers();
     } catch (err) {
