@@ -325,8 +325,9 @@ backend 89,58 % de líneas (86/96) y
 93,18 % de ramas (41/44), con 42 casos pasando; frontend 78,37 % de líneas
 (29/37) y 100 % de ramas (38/38), con 20 casos pasando. No pretendemos cubrir
 todas las operaciones de la API ni el detalle del DTO de proveedor: siguen en el
-denominador aunque no tengan pruebas específicas. El verde de GitHub aún requiere
-el push y una nueva corrida del mismo PR #31. Ambas compilaciones de producción
+denominador aunque no tengan pruebas específicas. La
+[corrida verde 38926894369](https://github.com/Geronimo2001/ingsoft3/actions/runs/38926894369)
+confirma que ambos jobs pasan en el mismo PR #31. Ambas compilaciones de producción
 también finalizaron correctamente en Docker.
 
 Los 22 casos de backend y los 8 de frontend pasan, pero ambos comandos de
@@ -447,7 +448,7 @@ devuelve cero si el stock alcanza o supera el mínimo; en caso contrario devuelv
 la diferencia. Por ejemplo, (3, 5) devuelve 2, (5, 5) devuelve 0 y (7, 5)
 devuelve 0. Es una regla de reposición del dominio, incluida automáticamente en
 el alcance de cobertura; todavía no está conectada a la API ni a la interfaz.
-La dejamos sin pruebas en el primer estado del PR y cubriremos sus caminos y
+La dejamos sin pruebas en el primer estado del PR y cubrimos sus caminos y
 el borde de igualdad después de guardar la evidencia roja. La cobertura ya era
 insuficiente antes de agregarla: no atribuimos toda la caída a este método.
 
@@ -464,21 +465,39 @@ tests (22 backend y 8 frontend). Fallaron exclusivamente los umbrales:
 
 Los pasos de resumen, generación de HTML del backend y publicación de reportes
 de ambos proyectos finalizaron correctamente a pesar del rojo. Consultamos el
-PR y GitHub informa `OPEN` y `mergeStateStatus=BLOCKED`. La revisión de la
-configuración concreta de required checks sigue pendiente.
+PR en ese estado y GitHub informó `OPEN` y `mergeStateStatus=BLOCKED`.
 
 Con confirmación del estudiante agregamos los tests faltantes en la misma rama,
-incluidos los caminos del código nuevo. Pasan localmente sin cambiar el gate.
-El siguiente paso es commit/push al mismo PR y comprobar la nueva corrida verde.
-Después vendrán verde y merge autorizado. El segundo PR saldrá de
-`main` actualizado y quedará abierto y rojo hasta la defensa. Ambos checks del
-TP4 deben estar configurados como obligatorios; todavía falta comprobarlo.
+incluidos los caminos del código nuevo, sin cambiar alcance ni umbrales. Después
+del push, la [corrida verde 38926894369](https://github.com/Geronimo2001/ingsoft3/actions/runs/38926894369)
+finalizó con `build-backend` y `build-frontend` exitosos, incluidos los pasos de
+tests/cobertura, summaries y publicación de reportes. El estudiante mergeó el
+[PR #31](https://github.com/Geronimo2001/ingsoft3/pull/31) el 16/10/2026;
+verificamos el estado `MERGED` y el commit `1500a0c498fbab7d5bcf68aae9b2a8aa82375975`.
+La secuencia rojo → tests → verde → merge queda completa.
+
+Para preparar el segundo PR creamos `feature/tp5-gate-rojo` desde ese `origin/main`,
+en un worktree separado para no incluir la documentación local pendiente. Su único
+archivo nuevo es `frontend/src/lib/replenishment.ts`: recomienda unidades para
+alcanzar el stock mínimo, prioriza los productos agotados y rechaza stocks
+negativos o no enteros. Todavía no se conecta a la interfaz ni tiene tests;
+queda incluido automáticamente en el alcance existente, sin tocar los umbrales.
+Este PR debe quedar abierto y rojo hasta la defensa, fuera del tag de entrega.
+La verificación de su frontend en Docker compila y pasa los 20 casos existentes,
+pero termina con error por líneas: 61,70 % (29/47) contra 70 %. Las ramas quedan
+en 76 % (38/50), por encima del mínimo de 75 %. El método nuevo figura con 0 %
+de cobertura. Es un rojo por líneas; no afirmamos que falle también por ramas.
+La rama está preparada localmente; faltan commit, push y apertura del segundo PR.
+
+Consultamos la protección de `main` por la API de GitHub: los checks
+`build-backend` y `build-frontend` son obligatorios y `strict=true` exige la rama
+actualizada. No fue necesario cambiar esa configuración.
 
 Estado de los cuatro enlaces de entrega:
 
-1. [Corrida con summaries y publicación de reportes](https://github.com/Geronimo2001/ingsoft3/actions/runs/38924460266): pasos exitosos; falta comprobar la descarga y el contenido de los artifacts.
+1. [Corrida verde con summaries y publicación de reportes](https://github.com/Geronimo2001/ingsoft3/actions/runs/38926894369): pasos exitosos. El estudiante descargó los artifacts de la corrida roja anterior; la inspección de su contenido sigue pendiente.
 2. [Corrida roja por el umbral](https://github.com/Geronimo2001/ingsoft3/actions/runs/38924460266): porcentajes y mínimos comprobados en los logs.
-3. [Primer PR #31](https://github.com/Geronimo2001/ingsoft3/pull/31): estado rojo registrado; faltan tests → verde → merge.
+3. [Primer PR #31](https://github.com/Geronimo2001/ingsoft3/pull/31): rojo → tests → verde → merge verificados.
 4. Segundo PR abierto y rojo: pendiente.
 
 Los enlaces serán a corridas y PR concretos, no a las pestañas generales. Las
