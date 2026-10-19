@@ -1,5 +1,32 @@
 # Decisiones 
 
+## Enlaces de este TP — TP6
+
+- Paquete backend: [ingsoft3-tp01-backend](https://github.com/users/Geronimo2001/packages/container/package/ingsoft3-tp01-backend).
+- Paquete frontend: [ingsoft3-tp01-frontend](https://github.com/users/Geronimo2001/packages/container/package/ingsoft3-tp01-frontend).
+- PR verde con «Entrar al registry» salteado: [job backend](https://github.com/Geronimo2001/ingsoft3/actions/runs/39294504328/job/118203402056) y [job frontend](https://github.com/Geronimo2001/ingsoft3/actions/runs/39294504328/job/118203401680).
+- Corrida de `main` con publicación como último paso propio, después de tests y reportes: [job backend](https://github.com/Geronimo2001/ingsoft3/actions/runs/39294777182/job/118204323201) y [job frontend](https://github.com/Geronimo2001/ingsoft3/actions/runs/39294777182/job/118204323636).
+- Backend QA: [ingsoft3.onrender.com](https://ingsoft3.onrender.com), con [consulta de productos](https://ingsoft3.onrender.com/api/products).
+- Backend PROD: [ingsoft3-api-prod-3hji.onrender.com](https://ingsoft3-api-prod-3hji.onrender.com), con [consulta de productos](https://ingsoft3-api-prod-3hji.onrender.com/api/products).
+- Frontends QA y PROD: pendientes de crear y verificar los servicios.
+
+Las imágenes de esta primera publicación automática llevan la etiqueta
+`sha-ac66ccb785b2155c45a8a095901804a1e81e24b9`, correspondiente al commit
+integrado mediante el PR #34. Sus referencias completas son:
+
+```text
+ghcr.io/geronimo2001/ingsoft3-tp01-backend:sha-ac66ccb785b2155c45a8a095901804a1e81e24b9
+ghcr.io/geronimo2001/ingsoft3-tp01-frontend:sha-ac66ccb785b2155c45a8a095901804a1e81e24b9
+```
+
+Estado: publicación exitosa comprobada en Actions el 19/10/2026. El estudiante
+confirmó la descarga exitosa de ambas imágenes al realizar la comprobación de
+acceso sin credenciales propuesta para este paso. Esta confirmación es del
+estudiante; no se repitió la descarga desde el asistente, cuyo intento previo
+no pudo conectarse al daemon de Docker. La consulta de visibilidad por API
+devolvió 403 porque el token local no tiene el alcance `read:packages`;
+esa limitación es independiente de la prueba de descarga.
+
 ## Resolución del conflicto
 
 El conflicto apareció porque dos ramas diferentes modificaron la misma línea
@@ -509,3 +536,169 @@ ampliamos la suite sobre los sectores importantes, en lugar de limitarnos al
 mínimo numérico. Comprobamos resultados y reportes ejecutando los comandos locales
 y los contenedores. Queda pendiente validar en GitHub el gate y registrar sus
 links; no damos por demostrados resultados que todavía no ocurrieron.
+
+# Decisiones — TP6 Entrega continua
+
+## Publicación automática del artefacto
+
+Antes el pipeline verificaba el código y construía imágenes sin publicarlas.
+La publicación manual usada en el TP2 quedaba separada de esas verificaciones.
+Ahora cada job publica su imagen en GHCR después de ejecutar los tests, exigir
+la cobertura y generar los reportes. La publicación de cada componente depende
+del éxito de su propio job; todavía no hay jobs de despliegue.
+
+La garantía combina tres controles: la protección de `main` y sus checks del
+TP anterior, la condición que permite publicar únicamente en un evento `push`
+a `main`, y la publicación como último paso del job que verifica ese componente.
+Los pasos de login y publicación no usan `always()`, `!cancelled()` ni se ignoran
+los errores de tests. Si falla una verificación, no se ejecuta la publicación.
+Los reportes sí conservan sus condiciones para mostrar resultados aunque fallen
+los tests.
+
+Si publicáramos aunque fallaran las verificaciones, una imagen publicada por
+el pipeline dejaría de indicar que su código pasó nuestros controles. Esta
+garantía no impide que alguien con credenciales publique manualmente otra imagen.
+Además, los tests no garantizan la ausencia de errores: verifican los casos y
+umbrales definidos en el TP5.
+
+## Permisos y autenticación
+
+Agregamos `contents: read` y `packages: write` dentro de `build-backend` y
+`build-frontend`. El primero permite leer el repositorio y el segundo publicar
+paquetes. Los permisos se declaran por job para no extender escritura de paquetes
+a futuros jobs que no la necesiten.
+
+El login usa `GITHUB_TOKEN`, generado por GitHub para la corrida; no creamos un
+token personal ni agregamos una contraseña al repositorio. Tanto el login como
+el parámetro `push` exigen evento `push` y rama `main`.
+
+## Identificación de las imágenes
+
+Cada imagen se etiqueta con `sha-${{ github.sha }}` para relacionarla con el
+commit que la produjo, en lugar de depender de una etiqueta móvil como `latest`.
+Los nombres de los paquetes se escribieron en minúsculas porque GHCR lo exige,
+aunque el usuario de GitHub contiene mayúsculas. Conservan el nombre
+`ingsoft3-tp01` configurado en el workflow.
+
+La etiqueta identifica el commit, pero por sí sola no es una garantía técnica
+de inmutabilidad: alguien con permiso podría sobrescribirla. Un digest identifica
+el contenido concreto de la imagen. En esta etapa tampoco afirmamos que esa
+imagen ya esté desplegada en QA o PROD.
+
+## Verificación del primer paso
+
+El [PR #34](https://github.com/Geronimo2001/ingsoft3/pull/34) quedó integrado.
+Revisamos los pasos de las dos corridas enlazadas arriba:
+
+- En el PR, ambos jobs pasaron los tests y controles, y «Entrar al registry»
+  quedó salteado. El paso final construyó con `push: false`: su nombre incluye
+  «publicar», pero en los PR no sube la imagen.
+- En `main`, ambos jobs pasaron, iniciaron sesión en GHCR y completaron la
+  construcción y publicación. Después de ese paso solo aparecen las tareas
+  automáticas `Post …` y `Complete job` de GitHub.
+- El estudiante confirmó que ambas imágenes se descargan en la comprobación
+  de acceso sin credenciales. Registramos esa confirmación como verificación
+  de accesibilidad pública, además del resultado verde de Actions.
+
+## Bases de datos de QA y PROD
+
+Creamos el proyecto `ingsoft3` en Neon con dos bases, `app_qa` y `app_prod`,
+en la misma branch. El estudiante confirmó que ambas aparecen en la lista de
+esa rama, guardó sus conexiones de forma privada y comprobó cada conexión
+desde SQL Editor con `SELECT current_database();`.
+
+Usamos bases distintas para separar los datos de pruebas de los de producción.
+El estudiante confirmó el aislamiento: insertó el proveedor
+`SOLO PROD - prueba TP6` en `app_prod` desde SQL Editor y comprobó que aparece
+en `/api/suppliers` de PROD, pero no en el mismo endpoint de QA.
+
+Nuestro backend lee `ConnectionStrings__DefaultConnection`, no el nombre
+`ConnectionStrings__Default` del ejemplo de la guía. Al arrancar ejecuta
+`EnsureCreated()` y `SeedData.EnsureSeeded(db)`: crea el esquema si corresponde
+y carga los datos iniciales. Las consultas exitosas de productos en ambas APIs
+y la prueba del proveedor confirman el acceso a las tablas utilizadas.
+No guardamos contraseñas ni cadenas de conexión en este archivo.
+
+## Primer backend en Render: QA
+
+El estudiante compartió `https://ingsoft3.onrender.com` como URL del backend de
+QA. Comprobamos que `GET /api/products` devuelve HTTP 200 y una respuesta JSON.
+Este endpoint consulta productos mediante el contexto de Entity Framework,
+por lo que comprueba una lectura real de la base, además de que la API responde.
+La prueba posterior del proveedor exclusivo de PROD, confirmada por el estudiante,
+comprobó el aislamiento. También confirmó Auto-Deploy en Off en este servicio.
+El primer despliegue corresponde a la creación del servicio; todavía falta
+implementar el despliegue desde GitHub Actions.
+
+## Backend de PROD en Render
+
+El estudiante compartió `https://ingsoft3-api-prod-3hji.onrender.com` como URL
+de PROD. Comprobamos que `GET /api/products` devuelve HTTP 200 y una lista JSON
+con tres productos. Tener datos iniciales iguales no demostraba el aislamiento;
+por eso hicimos la prueba posterior con el proveedor exclusivo de PROD.
+El estudiante confirmó que ese proveedor aparece solo en PROD y que Auto-Deploy
+está en Off en ambos backends. Estas comprobaciones manuales fueron confirmadas
+por el estudiante, no inspeccionadas en las consolas por el asistente.
+
+## Configuración del frontend al arrancar
+
+Reemplazamos `frontend/nginx.conf` por `frontend/default.conf.template` y
+modificamos el Dockerfile para copiarla a `/etc/nginx/templates/`. El arranque
+de la imagen oficial de nginx sustituye las variables de entorno de la plantilla
+y genera la configuración en `conf.d`.
+
+La dirección del backend llega mediante `BACKEND_URL`, sin barra final ni ruta.
+`DNS_RESOLVER` permite resolver su nombre mientras nginx está funcionando.
+El proxy conserva la ruta `/api/...` y activa SNI para las conexiones HTTPS
+al backend de Render mediante `proxy_ssl_server_name on`.
+
+Los valores predeterminados de la imagen son `BACKEND_URL=http://backend:8080`
+y `DNS_RESOLVER=127.0.0.11`, para mantener el funcionamiento de Docker Compose.
+En Render configuraremos `DNS_RESOLVER=8.8.8.8` y estas direcciones:
+
+- QA: `BACKEND_URL=https://ingsoft3.onrender.com`.
+- PROD: `BACKEND_URL=https://ingsoft3-api-prod-3hji.onrender.com`.
+
+Dentro de la imagen quedan los archivos compilados de la interfaz y la ruta
+relativa `/api` que usa el navegador por defecto. La dirección concreta del
+backend se configura al arrancar nginx, sin recompilar el frontend. Esto permite
+usar una misma imagen con distintas configuraciones por entorno.
+
+Verificación local realizada el 19/10/2026: construimos una sola imagen
+`ingsoft3-front-tp6-check` (compilación TypeScript y Vite exitosa) y ejecutamos
+dos contenedores temporales con esa imagen. Sin variables explícitas, la plantilla
+generó `http://backend:8080` y el DNS `127.0.0.11`; con las variables de QA,
+generó `https://ingsoft3.onrender.com` y `8.8.8.8`. `nginx -t` pasó en ambos casos.
+En el segundo contenedor arrancamos nginx y comprobamos HTTP 200 tanto en `/`
+como en `/api/products`, pasando por el proxy hasta la API real de QA.
+Los contenedores se eliminaron automáticamente al terminar. No probamos aquí
+el backend local de Compose ni la interfaz en un navegador.
+Todavía falta integrar el cambio por PR, desplegar ambos frontends y comprobar
+sus llamadas a las APIs desde Render.
+
+## Pendientes para completar durante el TP
+
+Estos puntos todavía no se implementaron ni se dan por verificados:
+
+- Crear los frontends de QA y PROD, registrar sus URLs y comprobar cada app completa.
+- Verificar en Render la plantilla del frontend ya probada en Docker:
+  valores de entorno distintos y llamadas a la API correcta.
+- Crear los environments y sus secrets; documentar la cadena con `needs`, `if`
+  y `environment`, y desactivar el auto-deploy del proveedor.
+- Implementar Continuous Delivery: QA automático y PROD con aprobación. A
+  diferencia de Continuous Deployment, habrá una decisión humana antes de PROD.
+- Definir criterios de aprobación y registrar una aprobación y un rechazo real
+  con motivo específico de la corrida.
+- Implementar smoke tests con reintentos y explicar qué comprueban y qué no,
+  especialmente que una respuesta exitosa puede venir de la versión anterior.
+- Documentar los límites del alojamiento elegido y cómo manejamos arranque,
+  suspensión, horas de servicio y minutos de construcción.
+- Si usamos Render reconstruyendo desde el repositorio, explicar que promovemos
+  el commit y no la misma imagen publicada: otra construcción puede producir
+  un resultado distinto.
+- Elegir y justificar un patrón de despliegue para esta app, considerando costo,
+  riesgo, rollback y observabilidad necesaria.
+- Ejecutar un rollback real y registrar procedimiento, tiempo medido y evidencia;
+  distinguir la reversión del código de la recuperación de datos.
+- Crear la release `v6.0.0` sobre el commit efectivamente desplegado en PROD y
+  completar los problemas encontrados y sus soluciones.
