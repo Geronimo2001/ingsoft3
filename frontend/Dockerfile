@@ -12,6 +12,8 @@ FROM build AS test
 ENTRYPOINT ["env", "-u", "VITE_API_URL", "npm", "run", "test:coverage", "--", "--coverage.reportsDirectory=/out/coverage", "--reporter=default", "--reporter=junit", "--outputFile.junit=/out/tests.xml"]
 
 FROM nginx:1.27-alpine AS final
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY default.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
+ENV BACKEND_URL=http://backend:8080 \
+    DNS_RESOLVER=127.0.0.11
 EXPOSE 80

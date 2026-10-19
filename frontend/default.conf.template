@@ -4,8 +4,12 @@ server {
   root /usr/share/nginx/html;
   index index.html;
 
+  resolver ${DNS_RESOLVER} valid=10s ipv6=off;
+  set $backend_api ${BACKEND_URL};
+
   location /api/ {
-    proxy_pass http://backend:8080/api/;
+    proxy_pass $backend_api;
+    proxy_ssl_server_name on;
   }
 
   location / {
