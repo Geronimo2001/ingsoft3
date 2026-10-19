@@ -4,11 +4,14 @@ on:
   pull_request:
     branches: [main]      # ← el que hace el trabajo: verifica ANTES del merge
   push:
-    branches: [main]      # ← sólo para que main tenga su corrida (la que lee el badge, §3.5)
+    branches: [main]      # Verifica y publica las imágenes del commit integrado
 
 jobs:
   build-backend:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Qué estamos verificando
         env:
@@ -17,13 +20,6 @@ jobs:
 
       - name: Bajar el código al runner
         uses: actions/checkout@v6
-
-      - name: Construir la imagen del backend
-        uses: docker/build-push-action@v7
-        with:
-          context: ./backend          # ajustá a donde esté TU Dockerfile
-          push: false                 # todavía no publicamos la imagen en ningún lado
-          tags: backend:ci            # el nombre de la imagen (hoy sólo vive dentro del runner)
 
       - name: Construir la etapa de tests del backend
         uses: docker/build-push-action@v7
@@ -59,8 +55,26 @@ jobs:
           path: TestResults/backend/
           if-no-files-found: error
 
+      - name: Entrar al registry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Construir y publicar la imagen del backend
+        uses: docker/build-push-action@v7
+        with:
+          context: ./backend
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          tags: ghcr.io/geronimo2001/ingsoft3-tp01-backend:sha-${{ github.sha }}
+
   build-frontend:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Qué estamos verificando
         env:
@@ -72,15 +86,6 @@ jobs:
 
       - name: Preparar el constructor que sabe cachear
         uses: docker/setup-buildx-action@v4
-
-      - name: Construir la imagen del frontend
-        uses: docker/build-push-action@v7
-        with:
-          context: ./frontend
-          push: false
-          tags: frontend:ci
-          cache-from: type=gha,scope=frontend
-          cache-to: type=gha,mode=max,scope=frontend
 
       - name: Construir la etapa de tests del frontend
         uses: docker/build-push-action@v7
@@ -108,4 +113,21 @@ jobs:
           name: frontend-tests-coverage
           path: TestResults/frontend/
           if-no-files-found: error
+
+      - name: Entrar al registry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Construir y publicar la imagen del frontend
+        uses: docker/build-push-action@v7
+        with:
+          context: ./frontend
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          tags: ghcr.io/geronimo2001/ingsoft3-tp01-frontend:sha-${{ github.sha }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
 
