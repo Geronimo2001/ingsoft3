@@ -131,3 +131,42 @@ jobs:
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
 
+  deploy-qa:
+    runs-on: ubuntu-latest
+    needs: [build-backend, build-frontend]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment:
+      name: qa
+      url: https://ingsoft3-front-qa-6z2e.onrender.com
+    permissions: {}
+    timeout-minutes: 30
+    steps:
+      - name: Disparar deploy de QA del commit verificado
+        env:
+          HOOK_API: ${{ secrets.RENDER_HOOK_API_QA }}
+          HOOK_FRONT: ${{ secrets.RENDER_HOOK_FRONT_QA }}
+        run: |
+          test -n "$HOOK_API" && test -n "$HOOK_FRONT"
+          curl -fsS --max-time 30 --output /dev/null "$HOOK_API&ref=$GITHUB_SHA"
+          curl -fsS --max-time 30 --output /dev/null "$HOOK_FRONT&ref=$GITHUB_SHA"
+
+      - name: Smoke test QA (API, base y frontend)
+        shell: bash
+        env:
+          URL_API: https://ingsoft3.onrender.com
+          URL_FRONT: https://ingsoft3-front-qa-6z2e.onrender.com
+        run: |
+          for i in $(seq 1 30); do
+            echo "Comprobando QA: intento $i de 30"
+            if curl -fsS --max-time 10 --output /dev/null "$URL_API/api/products" \
+               && curl -fsS --max-time 10 --output /dev/null "$URL_API/api/dashboard" \
+               && curl -fsS --max-time 10 --output /dev/null "$URL_FRONT/" \
+               && curl -fsS --max-time 10 --output /dev/null "$URL_FRONT/api/products"; then
+              echo "QA responde: API, base, frontend y proxy"
+              exit 0
+            fi
+            sleep 20
+          done
+          echo "QA no respondió a tiempo"
+          exit 1
+
