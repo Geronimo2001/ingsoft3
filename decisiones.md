@@ -8,7 +8,8 @@
 - Corrida de `main` con publicación como último paso propio, después de tests y reportes: [job backend](https://github.com/Geronimo2001/ingsoft3/actions/runs/39294777182/job/118204323201) y [job frontend](https://github.com/Geronimo2001/ingsoft3/actions/runs/39294777182/job/118204323636).
 - Backend QA: [ingsoft3.onrender.com](https://ingsoft3.onrender.com), con [consulta de productos](https://ingsoft3.onrender.com/api/products).
 - Backend PROD: [ingsoft3-api-prod-3hji.onrender.com](https://ingsoft3-api-prod-3hji.onrender.com), con [consulta de productos](https://ingsoft3-api-prod-3hji.onrender.com/api/products).
-- Frontends QA y PROD: pendientes de crear y verificar los servicios.
+- Frontend QA: [ingsoft3-front-qa-6z2e.onrender.com](https://ingsoft3-front-qa-6z2e.onrender.com/).
+- Frontend PROD: [ingsoft3-front-prod-553q.onrender.com](https://ingsoft3-front-prod-553q.onrender.com/).
 
 Las imágenes de esta primera publicación automática llevan la etiqueta
 `sha-ac66ccb785b2155c45a8a095901804a1e81e24b9`, correspondiente al commit
@@ -673,29 +674,90 @@ En el segundo contenedor arrancamos nginx y comprobamos HTTP 200 tanto en `/`
 como en `/api/products`, pasando por el proxy hasta la API real de QA.
 Los contenedores se eliminaron automáticamente al terminar. No probamos aquí
 el backend local de Compose ni la interfaz en un navegador.
-Todavía falta integrar el cambio por PR, desplegar ambos frontends y comprobar
-sus llamadas a las APIs desde Render.
+El estudiante confirmó la integración del PR #35. Después compartió el frontend
+de QA en `https://ingsoft3-front-qa-6z2e.onrender.com/`. Comprobamos HTTP 200
+en `/` y en `/api/products` sobre ese mismo dominio; la segunda respuesta es una
+lista JSON con cuatro productos. Esto verifica que el servidor entrega la página
+y que el proxy consulta la API desde Render. No equivale todavía a comprobar
+la interacción completa en el navegador ni la escritura de datos desde la UI.
+El estudiante confirmó Auto-Deploy en Off en ambos frontends al completar
+la configuración del environment de QA.
+
+## Error inicial al abrir el frontend de PROD
+
+El estudiante informó un error en la interfaz aunque Render mostraba el despliegue
+exitoso. La comprobación HTTP encontró `/` con estado 200, pero `/api/dashboard`
+a través del frontend devolvía 502. La consulta directa al backend tardó en
+responder y finalmente devolvió 200. Al repetir por el frontend, tanto
+`/api/dashboard` como `/api/products` devolvieron 200, sin cambiar código ni
+configuración. El dashboard devolvió un objeto JSON válido.
+
+El comportamiento es compatible con un arranque en frío del backend; no se
+confirmó esa causa en los logs de Render. El resultado demuestra por qué un
+deploy exitoso no basta para afirmar que la app está disponible: también hay
+que verificar sus dependencias. La revisión visual del navegador queda a cargo
+del estudiante; las comprobaciones anteriores fueron HTTP.
+
+## Despliegue automático a QA
+
+Creamos la rama `feature/deploy-qa` desde `origin/main` actualizado, conservando
+las notas locales. El job `deploy-qa` espera el éxito de `build-backend` y
+`build-frontend` mediante `needs`. Solo se ejecuta en un `push` a `main`;
+los PR verifican el código sin desplegar.
+
+El estudiante creó el environment `qa` y guardó los hooks. Al revisar sus nombres
+detectamos que el del frontend estaba en Variables, mientras que el del backend
+estaba en Secrets. El estudiante corrigió esa ubicación y verificamos por API
+que `RENDER_HOOK_API_QA` y `RENDER_HOOK_FRONT_QA` existen como secrets del
+environment. No leímos ni imprimimos sus valores.
+
+El job declara `environment: qa`, recibe esos secretos y solicita ambos deploys
+agregando `&ref=$GITHUB_SHA` a cada hook: Render debe construir el commit que
+verificó esa corrida, aunque `main` haya avanzado después. La URL del frontend
+queda asociada al environment en Actions. Este job no necesita permisos sobre
+el token de GitHub, por lo que declara `permissions: {}`.
+
+El smoke test usa las rutas de nuestra app, que no tiene `/health` ni `/api/tareas`:
+
+- `/api/products` y `/api/dashboard` del backend: comprueban API y consultas a BD.
+- `/` del frontend: comprueba que responde el servidor de la interfaz.
+- `/api/products` del frontend: comprueba además el proxy hacia la API.
+
+Cada consulta tiene un máximo de 10 segundos. Hay hasta 30 intentos separados
+por 20 segundos; si ninguno completa todas las consultas, el script sale con
+código 1 y falla el job. El job tiene un límite total de 30 minutos. Los reintentos
+permiten esperar el arranque de los servicios, como ocurrió con PROD.
+
+Estos chequeos HTTP no prueban toda la funcionalidad ni identifican el commit
+en ejecución. Un hook responde antes de que Render termine de construir y el
+smoke puede pasar contra la versión anterior. En el primer despliegue habrá que
+comparar el commit y el estado Live de ambos servicios en Render con la corrida.
+Además, Render reconstruye desde el repositorio: promovemos el mismo commit,
+no la misma imagen publicada en GHCR. Las dependencias o imágenes base pueden
+cambiar entre construcciones; desplegar la imagen del registry queda para TP7.
+
+Validamos la sintaxis YAML y la de los dos scripts Bash. Ejecutamos el mismo
+script de smoke contra QA, sin disparar hooks: los primeros dos intentos
+agotaron el tiempo de una consulta y el tercero completó los cuatro chequeos
+con éxito. Esto comprueba la disponibilidad actual y el mecanismo de reintento,
+no un nuevo despliegue. Falta integrar el PR
+y comprobar una corrida real de despliegue automático en Actions; todavía no
+damos por demostrado que los valores de los hooks sean correctos.
 
 ## Pendientes para completar durante el TP
 
 Estos puntos todavía no se implementaron ni se dan por verificados:
 
-- Crear los frontends de QA y PROD, registrar sus URLs y comprobar cada app completa.
-- Verificar en Render la plantilla del frontend ya probada en Docker:
-  valores de entorno distintos y llamadas a la API correcta.
-- Crear los environments y sus secrets; documentar la cadena con `needs`, `if`
-  y `environment`, y desactivar el auto-deploy del proveedor.
+- Probar cada app completa desde el navegador, incluida la escritura de datos.
+- Integrar y verificar el job de QA, comparando el commit desplegado en ambos servicios.
+- Crear el environment de producción con sus secrets y aprobación obligatoria.
 - Implementar Continuous Delivery: QA automático y PROD con aprobación. A
   diferencia de Continuous Deployment, habrá una decisión humana antes de PROD.
 - Definir criterios de aprobación y registrar una aprobación y un rechazo real
   con motivo específico de la corrida.
-- Implementar smoke tests con reintentos y explicar qué comprueban y qué no,
-  especialmente que una respuesta exitosa puede venir de la versión anterior.
+- Agregar el smoke test de PROD y verificar ambos smoke tests en Actions.
 - Documentar los límites del alojamiento elegido y cómo manejamos arranque,
   suspensión, horas de servicio y minutos de construcción.
-- Si usamos Render reconstruyendo desde el repositorio, explicar que promovemos
-  el commit y no la misma imagen publicada: otra construcción puede producir
-  un resultado distinto.
 - Elegir y justificar un patrón de despliegue para esta app, considerando costo,
   riesgo, rollback y observabilidad necesaria.
 - Ejecutar un rollback real y registrar procedimiento, tiempo medido y evidencia;
