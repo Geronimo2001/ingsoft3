@@ -20,7 +20,7 @@ export function Layout({ currentPage, onChangePage, children }: LayoutProps) {
       <header className="topbar">
         <div>
           <p className="eyebrow">MVP</p>
-          <h1>Control de stock y proveedores</h1>
+          <h1>Gestión de stock y proveedores</h1>
         </div>
         <nav className="nav-tabs" aria-label="Navegacion principal">
           {navItems.map((item) => (
