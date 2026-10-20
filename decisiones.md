@@ -769,7 +769,8 @@ las reglas de protección estaban vacías. El selector de la interfaz no le
 mostraba al estudiante su usuario; resolvimos la configuración mediante la API
 de GitHub. El 20/10/2026 la respuesta confirmó `required_reviewers` con
 `Geronimo2001` y `prevent_self_review: false`: el estudiante puede aprobar sus
-propias corridas. Todavía falta observar la pausa real del job en Actions.
+propias corridas. El estudiante informó posteriormente la pausa para revisión
+y el rechazo registrado más abajo.
 
 Los hooks reciben `&ref=$GITHUB_SHA` para desplegar el commit aprobado, aunque
 main avance durante la espera. Usamos el mismo smoke test de QA con las URLs
@@ -780,20 +781,30 @@ reemplaza revisar y rechazar aprobaciones viejas para evitar un retroceso.
 
 Antes de aprobar habrá que revisar QA verde, cambios del PR, funcionamiento de
 la interfaz, el commit Live en ambos servicios y que no se trate de una corrida
-vieja. Todavía faltan las pruebas reales de rechazo y aprobación con sus motivos.
-El primer flujo se rechazará con un motivo del estudiante basado en esa corrida;
-una corrida posterior incluirá un cambio visible del frontend y se aprobará.
+vieja. El rechazo fue confirmado por el estudiante; la aprobación sigue pendiente.
+
+## Rechazo de producción y siguiente cambio visible
+
+El estudiante compartió la [corrida rechazada 39447789648](https://github.com/Geronimo2001/ingsoft3/actions/runs/39447789648)
+como evidencia del rechazo manual hacia production. Se registra según su
+confirmación, sin consultar la corrida ni sus logs por pedido expreso suyo.
+No transcribimos un motivo porque no confirmó el comentario exacto que guardó.
+
+Para la próxima corrida preparamos un cambio visible en `Layout.tsx`: el título
+pasa de «Control de stock» a «Control de stock y proveedores». Esto permitirá
+identificar el cambio primero en QA y después en PROD tras la aprobación.
+El cambio está preparado en `feature/tp6-cambio-visible`, creada desde main
+actualizado. Falta integrarlo y realizar la aprobación de esa nueva corrida.
 
 ## Pendientes para completar durante el TP
 
 Estos puntos todavía no se implementaron ni se dan por verificados:
 
 - Probar cada app completa desde el navegador, incluida la escritura de datos.
-- Integrar el job de PROD y comprobar que queda Waiting for review.
+- Observar la nueva corrida de PROD en Waiting for review y completar su aprobación.
 - Implementar Continuous Delivery: QA automático y PROD con aprobación. A
   diferencia de Continuous Deployment, habrá una decisión humana antes de PROD.
-- Definir criterios de aprobación y registrar una aprobación y un rechazo real
-  con motivo específico de la corrida.
+- Registrar la aprobación real; el rechazo ya tiene su enlace y confirmación del estudiante.
 - Agregar el smoke test de PROD y verificar ambos smoke tests en Actions.
 - Documentar los límites del alojamiento elegido y cómo manejamos arranque,
   suspensión, horas de servicio y minutos de construcción.
