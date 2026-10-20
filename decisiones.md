@@ -740,17 +740,56 @@ Validamos la sintaxis YAML y la de los dos scripts Bash. Ejecutamos el mismo
 script de smoke contra QA, sin disparar hooks: los primeros dos intentos
 agotaron el tiempo de una consulta y el tercero completó los cuatro chequeos
 con éxito. Esto comprueba la disponibilidad actual y el mecanismo de reintento,
-no un nuevo despliegue. Falta integrar el PR
-y comprobar una corrida real de despliegue automático en Actions; todavía no
-damos por demostrado que los valores de los hooks sean correctos.
+no un nuevo despliegue.
+
+El PR #36 se integró en el commit `b4441e202086d0817c409e8825c9705dc9d2614e`.
+El 20/10/2026 revisamos la [corrida posterior al merge](https://github.com/Geronimo2001/ingsoft3/actions/runs/39347206657):
+ambos jobs de construcción y publicación pasaron; el [job deploy-qa](https://github.com/Geronimo2001/ingsoft3/actions/runs/39347206657/job/118382949584)
+ejecutó exitosamente los hooks y el smoke test. El estudiante confirmó en Render
+que ambos servicios de QA están Live con el commit `b4441e2`. Esa comparación
+completa la comprobación de versión que el smoke no hace.
+
+Antes del merge del [PR #36](https://github.com/Geronimo2001/ingsoft3/pull/36),
+verificamos la [corrida del PR](https://github.com/Geronimo2001/ingsoft3/actions/runs/39346817715):
+`build-backend` y `build-frontend` terminaron con éxito y `deploy-qa` quedó
+salteado, como corresponde a un Pull Request. GitHub informó el PR abierto y
+sin conflictos (`mergeStateStatus: CLEAN`). El despliegue real debe comprobarse
+en la corrida de `main` posterior al merge.
+
+## Preparación del despliegue a producción
+
+Agregamos `deploy-prod` en la rama `feature/deploy-prod`, creada desde `main`
+actualizado. Depende de `deploy-qa`; si QA falla o se saltea, PROD no corre.
+Declara el environment `production`, que debe tener un required reviewer antes
+de integrar este cambio. La aprobación se configura en GitHub, no en el YAML.
+
+Verificamos por API los nombres `RENDER_HOOK_API_PROD` y
+`RENDER_HOOK_FRONT_PROD` dentro de los secretos de production. En esa consulta
+las reglas de protección estaban vacías. El selector de la interfaz no le
+mostraba al estudiante su usuario; resolvimos la configuración mediante la API
+de GitHub. El 20/10/2026 la respuesta confirmó `required_reviewers` con
+`Geronimo2001` y `prevent_self_review: false`: el estudiante puede aprobar sus
+propias corridas. Todavía falta observar la pausa real del job en Actions.
+
+Los hooks reciben `&ref=$GITHUB_SHA` para desplegar el commit aprobado, aunque
+main avance durante la espera. Usamos el mismo smoke test de QA con las URLs
+de PROD, 30 intentos y tiempos máximos por consulta. Conserva la limitación de
+no identificar la versión en ejecución. `concurrency` con el grupo `deploy-prod`
+y `cancel-in-progress: false` evita ejecuciones simultáneas de este job; no
+reemplaza revisar y rechazar aprobaciones viejas para evitar un retroceso.
+
+Antes de aprobar habrá que revisar QA verde, cambios del PR, funcionamiento de
+la interfaz, el commit Live en ambos servicios y que no se trate de una corrida
+vieja. Todavía faltan las pruebas reales de rechazo y aprobación con sus motivos.
+El primer flujo se rechazará con un motivo del estudiante basado en esa corrida;
+una corrida posterior incluirá un cambio visible del frontend y se aprobará.
 
 ## Pendientes para completar durante el TP
 
 Estos puntos todavía no se implementaron ni se dan por verificados:
 
 - Probar cada app completa desde el navegador, incluida la escritura de datos.
-- Integrar y verificar el job de QA, comparando el commit desplegado en ambos servicios.
-- Crear el environment de producción con sus secrets y aprobación obligatoria.
+- Integrar el job de PROD y comprobar que queda Waiting for review.
 - Implementar Continuous Delivery: QA automático y PROD con aprobación. A
   diferencia de Continuous Deployment, habrá una decisión humana antes de PROD.
 - Definir criterios de aprobación y registrar una aprobación y un rechazo real
