@@ -10,6 +10,9 @@
 - Backend PROD: [ingsoft3-api-prod-3hji.onrender.com](https://ingsoft3-api-prod-3hji.onrender.com), con [consulta de productos](https://ingsoft3-api-prod-3hji.onrender.com/api/products).
 - Frontend QA: [ingsoft3-front-qa-6z2e.onrender.com](https://ingsoft3-front-qa-6z2e.onrender.com/).
 - Frontend PROD: [ingsoft3-front-prod-553q.onrender.com](https://ingsoft3-front-prod-553q.onrender.com/).
+- Release: [v6.0.0](https://github.com/Geronimo2001/ingsoft3/releases/tag/v6.0.0).
+- Rechazo confirmado por el estudiante: [corrida 39447789648](https://github.com/Geronimo2001/ingsoft3/actions/runs/39447789648).
+- Promoción aprobada y posterior rollback: [corrida 39449301367](https://github.com/Geronimo2001/ingsoft3/actions/runs/39449301367) (intento 1: promoción; intento 2: rollback).
 
 Las imágenes de esta primera publicación automática llevan la etiqueta
 `sha-ac66ccb785b2155c45a8a095901804a1e81e24b9`, correspondiente al commit
@@ -824,14 +827,44 @@ correctamente en PROD. Se registra según su confirmación.
 Para practicar la recuperación preparamos un cambio posterior en
 `feature/tp6-prueba-rollback`: el encabezado pasa de «Control de stock y
 proveedores» a «Gestión de stock y proveedores». No cambia el esquema ni los
-datos. Falta integrar y aprobar esta versión antes de iniciar la reversión.
+datos. La [corrida 39452161334](https://github.com/Geronimo2001/ingsoft3/actions/runs/39452161334)
+del commit `1ebeb682633f02f0ec70d5ec522455fd4d0d3392` completó los cuatro jobs;
+su deploy de PROD terminó el 20/10/2026 a las 12:53:38, hora de Córdoba.
 
-El destino del rollback será el commit de `v6.0.0`. Al restaurarlo en ambos
-servicios de PROD deberá volver el encabezado «Control de stock y proveedores».
-Mediremos desde la solicitud de despliegue hasta que ambos servicios estén Live
-con ese commit, usando las horas registradas en Render. No usaremos solo el
-smoke como señal de finalización, porque puede responder la versión anterior.
-La duración y las evidencias quedan pendientes de la prueba real.
+El destino del rollback fue el commit de `v6.0.0`, con el encabezado
+«Control de stock y proveedores». El estudiante confirmó en Render que tanto
+frontend como backend de PROD volvieron a `6ee64d3` y reportó estas duraciones:
+
+| Servicio de PROD | Duración reportada en Render |
+| --- | --- |
+| Frontend | 33,6 segundos |
+| Backend | 34,3 segundos |
+
+Son las duraciones por servicio confirmadas por el estudiante, no una medición
+propia del asistente. La mayor fue 34,3 segundos; no sumamos ambas porque los
+despliegues pueden solaparse. Tampoco afirmamos un tiempo global exacto desde
+la primera llamada al hook hasta el último Live sin las marcas de inicio y fin.
+La evidencia queda en Deploys de cada servicio de Render, en el despliegue del
+commit `6ee64d3`. El smoke no se usa como señal del fin de la recuperación,
+porque puede responder la versión anterior.
+
+Revisamos el intento 2 de la [corrida de v6.0.0](https://github.com/Geronimo2001/ingsoft3/actions/runs/39449301367):
+se repitieron todos los jobs, no solo PROD. QA solicitó el commit anterior a las
+12:33:09; una corrida posterior volvió a desplegar la versión nueva a QA.
+El job de rollback de PROD solicitó el commit `6ee64d3` a las 12:59:43 y terminó
+a las 12:59:49 (hora de Córdoba). Esos seis segundos son la duración del job,
+no el tiempo de recuperación de Render: el smoke terminó a las 12:59:47 y
+puede haber respondido la versión anterior.
+
+Después descargamos desde PROD el bundle `index-DOidaSg8.js`: contiene
+«Control de stock y proveedores» y no «Gestión de stock y proveedores».
+Esto confirma que el frontend público ya ofrece el texto de v6.0.0, aunque
+el navegador del estudiante todavía mostraba «Gestión». Se indicó recargar o
+abrir una ventana privada. El estudiante luego confirmó en Render la vuelta
+al commit anterior en ambos servicios y las duraciones registradas arriba.
+La comprobación del backend depende de esa confirmación, porque no expone
+su commit en la respuesta HTTP. También confirmamos por la API
+de GitHub que el tag v6.0.0 apunta a `6ee64d3914f177ea2b58aac4e59787872022e02f`.
 
 Este rollback restaura el código de la aplicación; no revierte los datos de
 Neon ni deshace migraciones. La prueba usa solo un cambio de texto para no
@@ -839,16 +872,98 @@ necesitar recuperación de datos. En un incidente con cambios de esquema o
 datos haría falta un plan específico de migraciones compatibles y recuperación
 desde backups o un punto en el tiempo, según lo que permita la infraestructura.
 
-## Pendientes para completar durante el TP
+## Límites del alojamiento y presupuesto de uso
+
+Render suspende los servicios Free tras 15 minutos sin tráfico; despertar puede
+tardar alrededor de un minuto. Las 750 horas mensuales se comparten por workspace:
+nuestros cuatro servicios consumen del mismo cupo mientras están activos.
+Al agotarlo se suspenden hasta el mes siguiente. Sin medio de pago, agotar los
+minutos de build impide nuevas construcciones, aunque siga disponible la versión
+anterior. El disco local es efímero, por eso los datos están en Neon. Render
+desaconseja Free para producción real; nuestro PROD es un entorno académico.
+Fuente consultada el 20/10/2026: [Render Free](https://render.com/docs/free).
+
+Como presupuesto propio, si los cuatro servicios permanecieran activos dos
+horas diarias durante 30 días consumirían 240 horas; activos permanentemente
+consumirían 2.880 horas. Evitaremos pings permanentes y merges de prueba
+innecesarios. Una promoción construye cuatro servicios: estimando 2 a 5 minutos
+por servicio, diez promociones consumirían 80 a 200 minutos de build, más los
+despliegues iniciales y rollbacks. Es una estimación de planificación, no una
+medición del consumo real.
+
+La guía cita 500 minutos de build mensuales. No confirmamos ese cupo particular
+en nuestra cuenta: hay que verificar el valor y el consumo restantes en
+Workspace → Billing antes de la defensa. El pipeline no administra esa cuota;
+usa reintentos acotados para demoras transitorias, pero no resuelve una suspensión
+ni comprueba por sí solo que Render haya terminado la nueva construcción.
+
+Neon Free también tiene límites compartidos por proyecto: la documentación
+consultada indica 100 CU-horas mensuales, 1 GB de almacenamiento y 5 GB de
+transferencia pública. El compute se suspende tras cinco minutos inactivo.
+Las dos bases de nuestra misma branch comparten infraestructura y cuotas;
+separar sus datos no duplica los recursos disponibles. Revisaremos Usage para
+mantener el proyecto dentro del plan y las URLs accesibles hasta la defensa.
+Fuente: [planes de Neon](https://neon.com/docs/introduction/plans), consultada
+el 20/10/2026. No usamos el Postgres gratuito de Render por su vencimiento a
+30 días, documentado en su página de Free.
+
+## Estrategia elegida para una producción real
+
+Para una app interna de inventario elegiría blue-green si el negocio necesita
+continuidad durante las actualizaciones: mantener dos versiones del frontend
+y backend, verificar la nueva y cambiar el tráfico hacia ella. Ante un error
+se podría volver a dirigir el tráfico a la anterior sin esperar otra construcción.
+Esto reduce el tiempo de recuperación, importante cuando registrar entradas y
+salidas de stock forma parte de la operación diaria.
+
+El costo es mantener dos conjuntos de servicios durante el despliegue y contar
+con un mecanismo de enrutamiento. Es una propuesta para una infraestructura
+real con presupuesto, no una capacidad implementada por nuestros cuatro
+servicios actuales: QA y PROD no son los lados blue y green, porque tienen
+datos y finalidades distintas.
+
+La base de producción requeriría migraciones compatibles con ambas versiones:
+por ejemplo, agregar campos antes de retirar los antiguos. Cambiar el tráfico
+no deshace movimientos de stock ni una migración destructiva. Las operaciones
+de escritura deben conservar las mismas reglas y no duplicarse durante el cambio.
+
+Antes de usar esta estrategia faltan métricas de errores y latencia, alertas,
+logs correlacionados, identificación del commit en ejecución y chequeos de
+operaciones de inventario. También habría que ensayar el cambio de tráfico y
+la recuperación de datos. Canary no sería mi primera elección aquí: tenemos
+poco tráfico y no contamos con métricas suficientes para evaluar una muestra
+pequeña de usuarios. Rolling requeriría varias instancias y compatibilidad
+durante la convivencia de versiones. Un feature flag serviría para habilitar
+una nueva pantalla de reposición después de desplegarla, pero no sustituye
+la recuperación del servicio ni debe saltarse las validaciones de stock.
+
+## Procedimiento de rollback que repetiríamos
+
+1. Identificar el commit anterior conocido y comprobar su compatibilidad con
+   el esquema actual. En esta prueba fue `6ee64d3`, tag `v6.0.0`.
+2. Abrir su corrida en Actions y reejecutar únicamente `deploy-prod`, revisar
+   y aprobar production. No repetir todos los jobs: en nuestra prueba ocurrió
+   y también se solicitó un despliegue anterior de QA.
+3. Si no se puede reejecutar la corrida, usar los dos hooks de PROD copiados
+   privadamente desde Render, agregando `&ref=<SHA anterior>` a cada uno.
+   Quien posee esos hooks puede desplegar directamente: este camino no pasa por
+   la aprobación de GitHub y se reservaría para una recuperación controlada.
+4. Registrar el inicio de cada deploy y esperar que ambos servicios estén Live
+   con el SHA elegido. Comprobar API, consultas a base, frontend y proxy; recargar
+   la interfaz para no confundir una pestaña vieja con el estado desplegado.
+5. Registrar tiempos, resultado y datos afectados. Nuestra prueba reportó
+   33,6 s para frontend y 34,3 s para backend; no asumir que una futura reversión
+   siempre tardará lo mismo. Este ejercicio practica el tiempo de recuperación
+   del servicio; fue un ensayo, no un incidente real con usuarios.
+
+## Pendientes para cerrar la entrega
 
 Estos puntos todavía no se implementaron ni se dan por verificados:
 
 - Probar cada app completa desde el navegador, incluida la escritura de datos.
-- Documentar los límites del alojamiento elegido y cómo manejamos arranque,
-  suspensión, horas de servicio y minutos de construcción.
-- Elegir y justificar un patrón de despliegue para esta app, considerando costo,
-  riesgo, rollback y observabilidad necesaria.
-- Ejecutar un rollback real y registrar procedimiento, tiempo medido y evidencia;
-  distinguir la reversión del código de la recuperación de datos.
+- Revisar el cupo y consumo reales de Render y Neon antes de la defensa.
+- Comprobar que el rechazo tenga un comentario propio y específico: su enlace
+  fue registrado sin inspeccionar el contenido, por pedido del estudiante.
+- El estudiante agregará personalmente la declaración de uso de IA del TP6.
 - Incorporar las notas finales al repositorio y completar los problemas encontrados
   y sus soluciones; el tag v6.0.0 queda como referencia fija de la versión desplegada.
