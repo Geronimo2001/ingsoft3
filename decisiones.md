@@ -781,7 +781,8 @@ reemplaza revisar y rechazar aprobaciones viejas para evitar un retroceso.
 
 Antes de aprobar habrá que revisar QA verde, cambios del PR, funcionamiento de
 la interfaz, el commit Live en ambos servicios y que no se trate de una corrida
-vieja. El rechazo fue confirmado por el estudiante; la aprobación sigue pendiente.
+vieja. El rechazo fue confirmado por el estudiante y la corrida posterior
+completó el despliegue a PROD, como se registra abajo.
 
 ## Rechazo de producción y siguiente cambio visible
 
@@ -794,23 +795,60 @@ Para la próxima corrida preparamos un cambio visible en `Layout.tsx`: el títul
 pasa de «Control de stock» a «Control de stock y proveedores». Esto permitirá
 identificar el cambio primero en QA y después en PROD tras la aprobación.
 El cambio está preparado en `feature/tp6-cambio-visible`, creada desde main
-actualizado. Falta integrarlo y realizar la aprobación de esa nueva corrida.
+actualizado. El cambio se integró en `6ee64d3914f177ea2b58aac4e59787872022e02f`.
+La [corrida 39449301367](https://github.com/Geronimo2001/ingsoft3/actions/runs/39449301367)
+terminó con sus cuatro jobs exitosos, incluido [deploy-prod](https://github.com/Geronimo2001/ingsoft3/actions/runs/39449301367/job/118720165661).
+El estudiante confirmó que ambos frontends mostraban el mismo commit en Render.
+
+Al principio el navegador mostraba el encabezado anterior en QA y el nuevo en
+PROD. Descargamos los HTML y sus bundles JavaScript: ambos entornos servían
+`index-DOidaSg8.js` con contenido idéntico y el encabezado nuevo. El estudiante
+confirmó que al abrir una sesión nueva se resolvió la diferencia. La página
+abierta conservaba la versión anterior. El título de la pestaña sigue siendo
+«Control de stock» porque no cambiamos `index.html`.
+
+El flujo implementado es Continuous Delivery: QA se actualiza automáticamente
+tras la verificación y PROD queda sujeto a aprobación. No implementamos
+Continuous Deployment, que llevaría los cambios a PROD sin ese paso humano.
+En esta app el gate permite revisar el cambio y su funcionamiento antes de
+exponerlo en producción; el smoke actual no identifica la versión ni sustituye
+esa revisión.
+
+## Release y preparación de la prueba de rollback
+
+El estudiante confirmó la creación del tag y la
+[release v6.0.0](https://github.com/Geronimo2001/ingsoft3/releases/tag/v6.0.0)
+sobre `6ee64d3914f177ea2b58aac4e59787872022e02f`, el commit desplegado
+correctamente en PROD. Se registra según su confirmación.
+
+Para practicar la recuperación preparamos un cambio posterior en
+`feature/tp6-prueba-rollback`: el encabezado pasa de «Control de stock y
+proveedores» a «Gestión de stock y proveedores». No cambia el esquema ni los
+datos. Falta integrar y aprobar esta versión antes de iniciar la reversión.
+
+El destino del rollback será el commit de `v6.0.0`. Al restaurarlo en ambos
+servicios de PROD deberá volver el encabezado «Control de stock y proveedores».
+Mediremos desde la solicitud de despliegue hasta que ambos servicios estén Live
+con ese commit, usando las horas registradas en Render. No usaremos solo el
+smoke como señal de finalización, porque puede responder la versión anterior.
+La duración y las evidencias quedan pendientes de la prueba real.
+
+Este rollback restaura el código de la aplicación; no revierte los datos de
+Neon ni deshace migraciones. La prueba usa solo un cambio de texto para no
+necesitar recuperación de datos. En un incidente con cambios de esquema o
+datos haría falta un plan específico de migraciones compatibles y recuperación
+desde backups o un punto en el tiempo, según lo que permita la infraestructura.
 
 ## Pendientes para completar durante el TP
 
 Estos puntos todavía no se implementaron ni se dan por verificados:
 
 - Probar cada app completa desde el navegador, incluida la escritura de datos.
-- Observar la nueva corrida de PROD en Waiting for review y completar su aprobación.
-- Implementar Continuous Delivery: QA automático y PROD con aprobación. A
-  diferencia de Continuous Deployment, habrá una decisión humana antes de PROD.
-- Registrar la aprobación real; el rechazo ya tiene su enlace y confirmación del estudiante.
-- Agregar el smoke test de PROD y verificar ambos smoke tests en Actions.
 - Documentar los límites del alojamiento elegido y cómo manejamos arranque,
   suspensión, horas de servicio y minutos de construcción.
 - Elegir y justificar un patrón de despliegue para esta app, considerando costo,
   riesgo, rollback y observabilidad necesaria.
 - Ejecutar un rollback real y registrar procedimiento, tiempo medido y evidencia;
   distinguir la reversión del código de la recuperación de datos.
-- Crear la release `v6.0.0` sobre el commit efectivamente desplegado en PROD y
-  completar los problemas encontrados y sus soluciones.
+- Incorporar las notas finales al repositorio y completar los problemas encontrados
+  y sus soluciones; el tag v6.0.0 queda como referencia fija de la versión desplegada.
