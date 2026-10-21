@@ -169,6 +169,44 @@ curl -I https://ingsoft3-api-prod-3hji.onrender.com/health
 El monitor externo del ejercicio debe pausarse al terminar la prueba de caida
 y recuperacion, para no mantener los servicios gratuitos despiertos todo el mes.
 
+### Sentry: errores, demoras y uso
+
+El backend usa `Sentry.AspNetCore` y lee `SENTRY_DSN` del entorno. En Render,
+agregar esa variable en el servicio de la API PROD con el DSN de su proyecto
+de ASP.NET Core. Sin valor queda desactivado, por ejemplo en QA y en local.
+El frontend usa `@sentry/react`, inicializado antes de renderizar React 19.
+Su DSN publico esta en `frontend/src/instrument.ts`; se activa solo en
+`ingsoft3-front-prod-553q.onrender.com`. Esa direccion permite enviar eventos,
+no leer ni administrar el proyecto de Sentry. La misma imagen sigue sirviendo
+para QA y PROD.
+
+Ambos SDK miden el 100 % de las solicitudes del ejercicio (`TracesSampleRate`
+y `tracesSampleRate` en 1.0). Frontend etiqueta el entorno con su hostname;
+backend usa el entorno de ASP.NET Core, o `SENTRY_ENVIRONMENT` si se define.
+No habilitamos Session Replay ni logs de Sentry. Desactivamos la captura
+automatica de datos de usuario y, en frontend, cookies, headers, cuerpos HTTP
+y parametros de consulta.
+
+Para verificar despues del PR, pipeline y despliegue a PROD:
+
+1. Usar el frontend de produccion: Inicio, Productos y stock, Proveedores y
+   algunas operaciones normales. Esto genera mediciones reales.
+2. Abrir una vez `https://ingsoft3-api-prod-3hji.onrender.com/api/falla`.
+   Devuelve HTTP 500 intencionalmente para generar el error de prueba del TP9.
+3. En el proyecto backend de Sentry, comprobar el error en Issues y las
+   operaciones en Traces o en la tabla de transacciones del dashboard.
+   En frontend, filtrar por el hostname de PROD para ver las mediciones.
+4. Comparar cantidad de solicitudes y P95 de las operaciones normales: registrar
+   la mas usada y la mas lenta, el periodo observado y sus valores, y crear una
+   tarjeta en el tablero a partir de ese dato. El endpoint de prueba no es una
+   operacion normal de inventario.
+5. Retirar `/api/falla` del codigo mediante otro PR despues de verificar el
+   error. La ruta es temporal y no forma parte de las funcionalidades de la app.
+
+Las comprobaciones locales con un receptor simulado verifican la generacion de
+eventos y trazas; la recepcion en los proyectos reales se verifica despues del
+despliegue. No se requiere un token de administracion de Sentry para esta etapa.
+
 ## TP8: preprod con infraestructura como codigo
 
 La carpeta [`infra/`](infra/README.md) declara un entorno nuevo con Terraform:

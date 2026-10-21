@@ -28,6 +28,13 @@ if (args.Contains("--seed-only"))
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.WebHost.UseSentry(options =>
+{
+    options.Dsn = builder.Configuration["SENTRY_DSN"] ?? "";
+    options.TracesSampleRate = 1.0;
+    options.SendDefaultPii = false;
+});
+
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
@@ -49,6 +56,10 @@ app.UseCors("Frontend");
 app.MapControllers();
 app.MapMethods("/health", new[] { "GET", "HEAD" },
     () => Results.Ok(new { status = "ok" }));
+
+// TP9: endpoint temporal para verificar el error en Sentry; retirar tras el ensayo.
+app.MapGet("/api/falla", string () =>
+    throw new InvalidOperationException("Falla de prueba del TP9"));
 
 using (var scope = app.Services.CreateScope())
 {
