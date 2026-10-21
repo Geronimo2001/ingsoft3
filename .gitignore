@@ -19,3 +19,5 @@ ingsoft3-tp01/
 .env
 **/TestResults/
 **/coverage/
+**/playwright-report/
+**/test-results/

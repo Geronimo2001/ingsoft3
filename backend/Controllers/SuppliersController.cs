@@ -33,7 +33,6 @@ public class SuppliersController : ControllerBase
     {
         var supplier = await _db.Suppliers
             .Include(s => s.Products)
-            .ThenInclude(p => p.Supplier)
             .FirstOrDefaultAsync(s => s.Id == id);
 
         return supplier is null
