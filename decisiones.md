@@ -1359,7 +1359,13 @@ conserva; el plan de IaC en cada PR es opcional y no se agrego en esta entrega.
   El estudiante suspendio y reanudo la API, mostro el email DOWN y confirmo el
   UP y la pausa final. Estimo unos cinco minutos entre etapas: no conservo los
   horarios exactos, asi que es una estimacion, no una medicion cronometrada.
-  Verificamos la recuperacion del health por HTTP. El monitor queda pausado
+  Verificamos la recuperacion del health por HTTP. En el panel autenticado del
+  [monitor 804370335](https://dashboard.uptimerobot.com/monitors/804370335)
+  comprobamos estado Paused y un incidente Resolved por HTTP 503, iniciado el
+  21/10/2026 a las 16:57:56 GMT-3, con duracion registrada de **5 min 4 s**.
+  Esa duracion DOWN/UP no mide cuanto paso desde la suspension hasta el email;
+  para el tiempo de aviso conservamos la estimacion del estudiante.
+  El monitor queda pausado
   para evitar mantener Render despierto; se reactiva para repetir en defensa.
 - **Sentry:** `Sentry.AspNetCore` 6.12.1 y `@sentry/react` 11.8.0. Backend lee
   `SENTRY_DSN` del entorno y queda desactivado sin valor; frontend usa su DSN
@@ -1410,11 +1416,21 @@ conserva; el plan de IaC en cada PR es opcional y no se agrego en esta entrega.
   sin errores; la recepcion real se verifico despues en Sentry. Usamos el SDK
   local `.dotnet/` y permisos para los sockets bloqueados por el sandbox.
   El asistente no realiza pushes ni merges remotos.
-- **Cierre pendiente:** retiramos `/api/falla` del codigo despues de registrar
+- **Cierre tecnico comprobado:** retiramos `/api/falla` del codigo despues de registrar
   el error. La compilacion paso sin errores ni advertencias; comprobamos en
   local GET/HEAD de `/health` en 200, lectura de productos en 200 y `/api/falla`
-  en 404. El retiro y esta documentacion estan en `tp9/cierre`; faltan el PR,
-  el despliegue y comprobar el 404 en PROD. El evento previo permanece en Sentry.
-  Despues corresponde crear el tag y la release `v9.0.0` sobre el SHA realmente
-  desplegado. Los datos de Sentry y del monitor tienen retencion limitada;
+  en 404. El estudiante integro el retiro y aprobo su despliegue. La
+  [corrida 39677451684](https://github.com/Geronimo2001/ingsoft3/actions/runs/39677451684)
+  termino en verde para `63ba44de9c34c40ba981d1238909f6530f3cf071`, y los cuatro
+  analisis de CodeQL de ese commit terminaron sin errores ni hallazgos.
+  Render mostro la imagen backend de ese SHA con estado Live. El 21/10/2026
+  comprobamos en PROD `/api/falla` en 404 y HEAD `/health` en 200. El evento
+  previo permanece en Sentry: retiramos la ruta, no el registro del ensayo.
+- **Version de entrega:** `v9.0.0`. Este cierre documental tambien pasa por PR.
+  Para publicar la version se espera su pipeline y su promocion a PROD,
+  se comprueba en Render que ambas imagenes Live correspondan al SHA elegido,
+  y recien entonces se crea el tag local sobre ese commit. El estudiante hace
+  el push del tag y publica la Release de GitHub; no se etiqueta una rama local
+  previa al squash ni se afirma publicada una release antes de comprobarla.
+  Los datos de Sentry y del monitor tienen retencion limitada;
   antes de una defensa tardia hay que generar trafico y repetir los ensayos.
