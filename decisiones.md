@@ -10,7 +10,12 @@
 - Frontend PROD: [ingsoft3-front-prod-553q.onrender.com](https://ingsoft3-front-prod-553q.onrender.com/).
 - API PROD: [ingsoft3-api-prod-3hji.onrender.com](https://ingsoft3-api-prod-3hji.onrender.com/api/products).
 - Primera corrida de despliegue por imágenes: [39540383471](https://github.com/Geronimo2001/ingsoft3/actions/runs/39540383471), verde en construcción, publicación, QA y PROD, para `f0ae5b4d0796f36db4108e1360acbdadaa95b629` (PR #41).
-- Pendientes: integración verde con e2e roja y sus dos reportes, corrida completa verde posterior con las suites y release `v7.0.0`. No se dan por verificados.
+- Primera cadena completa con suites y PROD: [39544004447](https://github.com/Geronimo2001/ingsoft3/actions/runs/39544004447), commit `2986800bbfb477301f2337c1b6c17497793056a5` (PR #43), anterior al ensayo de rotura.
+- Commit que rompió la aplicación: [015f9ea76699401ea27a6af30f188de82b262eea](https://github.com/Geronimo2001/ingsoft3/commit/015f9ea76699401ea27a6af30f188de82b262eea) (PR #44).
+- Corrida con integración verde, e2e roja y PROD salteado: [39545351766](https://github.com/Geronimo2001/ingsoft3/actions/runs/39545351766).
+- Reporte de integración de esa corrida: [playwright-report-integracion](https://github.com/Geronimo2001/ingsoft3/actions/runs/39545351766/artifacts/12321731176) (2 passed y 1 flaky, sin fallos definitivos ni omitidos).
+- Reporte e2e de esa corrida: [playwright-report-e2e](https://github.com/Geronimo2001/ingsoft3/actions/runs/39545351766/artifacts/12320863618) (2 failed y 1 passed; incluye capturas y trazas).
+- Pendientes: corrida completa verde posterior a corregir la rotura y release `v7.0.0`. No se dan por verificados. Los reportes tienen retención de 30 días; conservar una descarga si la defensa es posterior a su vencimiento.
 
 ## Enlaces de este TP — TP6
 
@@ -1158,8 +1163,8 @@ reemplaza esa revisión. No se reejecutan suites antiguas contra un QA que ya co
 otra versión. Los Events siguen siendo necesarios para comprobar la imagen Live;
 el smoke y estas pruebas no identifican automáticamente el commit en ejecución.
 
-La corrida automática con ambas suites, la demostración de aplicación rota que
-deje integración verde y e2e roja, y el cierre `v7.0.0` siguen pendientes.
+La corrida automática y la demostración de bloqueo se registran más abajo.
+El cierre `v7.0.0` sigue pendiente.
 
 La ejecución local contra el frontend público de QA terminó con `3 passed` en
 20,2 segundos, sin flaky ni omitidos. La primera ejecución de desarrollo se
@@ -1177,7 +1182,52 @@ ramas. Se validaron el YAML, los scripts Bash y la cadena de needs del workflow;
 el script de resumen se ejecutó con el JSON real de Playwright y mostró
 `3 passed, 0 failed, 0 flaky, 0 skipped`. La prueba de integración y la e2e fueron
 ejecuciones manuales contra QA; el comportamiento automático posterior al merge
-todavía debe comprobarse en GitHub Actions.
+se comprobó después en GitHub Actions, como se registra a continuación.
+
+## Ensayo real del gate y diagnóstico con los dos reportes
+
+El PR #43 se integró en `2986800bbfb477301f2337c1b6c17497793056a5`.
+La corrida `39544004447` completó los seis jobs en verde, incluidos integración,
+e2e y PROD, y publicó ambos reportes. El asistente verificó jobs y artifacts por
+la API de GitHub; el estudiante realizó la aprobación de production.
+
+Para ensayar el rechazo agregamos `disabled` al botón Crear producto en
+`frontend/src/pages/ProductsPage.tsx`. El commit local `355f904` y el merge del
+PR #44 (`015f9ea76699401ea27a6af30f188de82b262eea`) solo cambian esa línea de la
+aplicación: no modifican tests, configuración de Playwright ni el gate. El build
+y los unitarios de frontend pasaron antes de subirlo.
+
+La corrida `39545351766` terminó así: ambos builds verdes, deploy y smoke de QA
+verdes, integración verde, e2e roja y deploy-prod salteado. El asistente descargó
+los dos artifacts, leyó los datos del reporte HTML y revisó una captura y la
+traza del reintento. En e2e fallan alta/borrado y SKU repetido porque ambos
+necesitan pulsar Crear producto. Playwright encuentra el botón pero indica
+`element is not enabled`; la traza muestra `<button disabled>Crear producto</button>`.
+La captura muestra la pantalla cargada con el botón deshabilitado. El caso de
+movimientos pasa porque trabaja con un producto preparado por API y no usa el
+botón de alta. Resultado: 2 failed, 1 passed, 0 flaky y 0 skipped.
+
+Ese diagnóstico sale del reporte: la app responde y la integración termina
+verde, pero la pantalla impide una operación. El fallo persistente pertenece al
+frontend. PROD no llegó a pedir aprobación: el pipeline no solicitó desplegar
+esa versión en producción. Si la API hubiera fallado definitivamente en
+integración, e2e habría quedado salteada por su needs.
+
+La integración verde tuvo un detalle que no ocultamos: 2 passed y 1 flaky.
+En el primer intento del caso de stock, un GET de limpieza devolvió 502 en lugar
+de 200; el caso pasó al reintentar. No hay logs privados de Render que permitan
+atribuirlo a una causa concreta. Es diferente del botón deshabilitado, que falló
+en ambos intentos. El primer intento dejó un proveedor temporal sin productos:
+el asistente lo identificó por nombre, timestamp, contacto y ausencia de productos,
+y lo eliminó, comprobando DELETE 204 y GET 404. La siguiente corrida verde debe
+revisarse también por flaky, no solo por el color del job. Si el problema se
+repite, hay que investigarlo; no se acepta un 502 como respuesta correcta ni se
+aumenta el número de retries.
+
+La corrección preparada elimina únicamente `disabled` del botón y conserva los
+tests y sus expectativas. Se publica en otra rama para que QA reciba una imagen
+nueva y la misma cadena vuelva a comprobar los recorridos. El resultado verde
+posterior, su aprobación y el Live de ambos servicios de PROD siguen pendientes.
 
 ## Uso de IA en esta etapa
 
@@ -1191,6 +1241,8 @@ proveedores, con reproducción de la excepción y traducción SQL corregida.
 El asistente completó las tres integraciones, la fixture de datos y limpieza, los
 tres recorridos con navegador, los jobs y sus resúmenes. Verificó las suites
 contra QA y los unitarios de frontend, y corrigió la búsqueda accesible de los
-selects a partir del reporte. El estudiante realizará el push y creará el PR;
-la ejecución automática, el ejercicio de rotura y la release se documentarán
-cuando se completen.
+selects a partir del reporte. Después revisó los jobs y los dos artifacts de la
+corrida roja, diagnosticó el botón deshabilitado, identificó el flaky de limpieza
+y preparó la restauración del botón. El estudiante realiza el push, los PR y
+las aprobaciones de PROD. El resultado posterior a la corrección y la release
+se documentarán cuando se completen.
