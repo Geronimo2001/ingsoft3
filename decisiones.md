@@ -1,6 +1,6 @@
 # Decisiones 
 
-## Enlaces del TP7 — en curso
+## Enlaces del TP7
 
 - Paquete backend: [ingsoft3-tp01-backend](https://github.com/users/Geronimo2001/packages/container/package/ingsoft3-tp01-backend).
 - Paquete frontend: [ingsoft3-tp01-frontend](https://github.com/users/Geronimo2001/packages/container/package/ingsoft3-tp01-frontend).
@@ -15,7 +15,12 @@
 - Corrida con integración verde, e2e roja y PROD salteado: [39545351766](https://github.com/Geronimo2001/ingsoft3/actions/runs/39545351766).
 - Reporte de integración de esa corrida: [playwright-report-integracion](https://github.com/Geronimo2001/ingsoft3/actions/runs/39545351766/artifacts/12321731176) (2 passed y 1 flaky, sin fallos definitivos ni omitidos).
 - Reporte e2e de esa corrida: [playwright-report-e2e](https://github.com/Geronimo2001/ingsoft3/actions/runs/39545351766/artifacts/12320863618) (2 failed y 1 passed; incluye capturas y trazas).
-- Pendientes: corrida completa verde posterior a corregir la rotura y release `v7.0.0`. No se dan por verificados. Los reportes tienen retención de 30 días; conservar una descarga si la defensa es posterior a su vencimiento.
+- Corrida completa verde posterior a corregir la rotura: [39546632534](https://github.com/Geronimo2001/ingsoft3/actions/runs/39546632534), commit `4639278a2efe6733dd5c2bfa904c8fca59f4fb3c` (PR #45), incluidos los seis jobs y PROD.
+- Reportes de la recuperación: [integración](https://github.com/Geronimo2001/ingsoft3/actions/runs/39546632534/artifacts/12321915332) y [e2e](https://github.com/Geronimo2001/ingsoft3/actions/runs/39546632534/artifacts/12321469467), cada uno con 3 passed, 0 failed, 0 flaky y 0 skipped.
+- Imagen backend de esa recuperación: `ghcr.io/geronimo2001/ingsoft3-tp01-backend:sha-4639278a2efe6733dd5c2bfa904c8fca59f4fb3c`.
+- Imagen frontend de esa recuperación: `ghcr.io/geronimo2001/ingsoft3-tp01-frontend:sha-4639278a2efe6733dd5c2bfa904c8fca59f4fb3c`.
+- Versión de entrega: [v7.0.0](https://github.com/Geronimo2001/ingsoft3/releases/tag/v7.0.0). El tag y la release se crean al terminar el cierre documental, sobre el commit comprobado Live en PROD; ver el procedimiento al final de TP7.
+- Los reportes tienen retención de 30 días; conservar una descarga si la defensa es posterior a su vencimiento. Las referencias anteriores identifican corridas concretas, no se reemplazan por los enlaces de una reconstrucción posterior.
 
 ## Enlaces de este TP — TP6
 
@@ -1224,10 +1229,57 @@ revisarse también por flaky, no solo por el color del job. Si el problema se
 repite, hay que investigarlo; no se acepta un 502 como respuesta correcta ni se
 aumenta el número de retries.
 
-La corrección preparada elimina únicamente `disabled` del botón y conserva los
-tests y sus expectativas. Se publica en otra rama para que QA reciba una imagen
-nueva y la misma cadena vuelva a comprobar los recorridos. El resultado verde
-posterior, su aprobación y el Live de ambos servicios de PROD siguen pendientes.
+La corrección elimina únicamente `disabled` del botón y conserva los tests y sus
+expectativas. Se publicó en otra rama y se integró mediante el PR #45, commit
+`4639278a2efe6733dd5c2bfa904c8fca59f4fb3c`. La corrida `39546632534` completó los
+seis jobs en verde y el estudiante informó que realizó el deploy a producción.
+El asistente verificó los jobs y sus logs: integración terminó con 3 passed en
+9,3 segundos y e2e con 3 passed en 14,6 segundos; ambas sin fallos, flaky ni
+omitidos. También comprobó que los dos artifacts quedaron publicados.
+
+La comprobación HTTP pública posterior devolvió 200 en las páginas de QA y PROD,
+en `/api/products` a través de ambos frontends y en `/api/products` de la API
+directa de PROD. Las consultas devolvieron listas JSON. Esto confirma esas rutas
+de lectura y el proxy en ese momento; no identifica automáticamente el SHA Live.
+
+Esta secuencia cierra fallo real del frontend, bloqueo de PROD, diagnóstico con
+los dos reportes y recuperación de la cadena. La aprobación de PROD sigue siendo
+humana. El ensayo no garantiza que no existan otros errores: cubre los casos
+elegidos, no toda la app, y depende de que QA siga ejecutando la imagen de la
+corrida durante ambas suites.
+
+## Cierre: del tag de Git a las imágenes de producción
+
+La versión de entrega se llama `v7.0.0`. El tag es un nombre de Git para un commit;
+no es una etiqueta adicional que nuestro pipeline publique en GHCR. El registry
+usa `sha-<commit completo>`. Para pasar de la release a sus dos imágenes:
+
+```bash
+SHA_RELEASE=$(git rev-list -n 1 v7.0.0)
+echo "ghcr.io/geronimo2001/ingsoft3-tp01-backend:sha-$SHA_RELEASE"
+echo "ghcr.io/geronimo2001/ingsoft3-tp01-frontend:sha-$SHA_RELEASE"
+```
+
+El cierre documental también pasa por PR. Después de su merge se espera la
+cadena completa, se revisa QA y se aprueba PROD. Antes de crear el tag hay que
+comprobar en Events que ambos servicios de PROD estén Live con las imágenes de
+esa corrida y cotejar el commit activo en Deployments de GitHub. Un job verde o
+un deployment recién creado no alcanzan por sí solos: Render puede continuar
+sirviendo la versión anterior mientras procesa el hook. La comprobación de
+Events requiere el panel privado del estudiante.
+
+El tag se crea sobre ese SHA comprobado, aunque main tenga un commit más nuevo.
+Luego el estudiante hace el push del tag y crea la release con `--verify-tag`,
+para impedir que se cree accidentalmente sobre otro commit. No se reconstruyen
+imágenes para darles nombre de release ni se reejecutan corridas antiguas: se
+consulta el paquete ya publicado para ese SHA. La existencia del tag y la release
+se verifican en GitHub después de publicarlos; el enlace anterior es el destino
+de ese cierre, no una afirmación de publicación anticipada.
+
+Para la defensa se conservan las URLs de QA y PROD accesibles, los dos reportes
+de la corrida roja y la corrida verde posterior. En el panel de Render se muestran
+los cuatro servicios con fuente Image y los Events de deploy por hook que nombran
+sus imágenes. El formulario de la cátedra recibe solo el repositorio público.
 
 ## Uso de IA en esta etapa
 
@@ -1244,5 +1296,7 @@ contra QA y los unitarios de frontend, y corrigió la búsqueda accesible de los
 selects a partir del reporte. Después revisó los jobs y los dos artifacts de la
 corrida roja, diagnosticó el botón deshabilitado, identificó el flaky de limpieza
 y preparó la restauración del botón. El estudiante realiza el push, los PR y
-las aprobaciones de PROD. El resultado posterior a la corrección y la release
-se documentarán cuando se completen.
+las aprobaciones de PROD. El asistente verificó la corrida verde posterior, los
+resultados sin flaky, los reportes y preparó el cierre documental y la relación
+tag-commit-imágenes. La publicación del tag y la release se comprueba después
+de que el estudiante confirme el estado Live y complete el cierre indicado.
