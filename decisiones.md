@@ -9,7 +9,8 @@
 - API QA: [ingsoft3.onrender.com](https://ingsoft3.onrender.com/api/products).
 - Frontend PROD: [ingsoft3-front-prod-553q.onrender.com](https://ingsoft3-front-prod-553q.onrender.com/).
 - API PROD: [ingsoft3-api-prod-3hji.onrender.com](https://ingsoft3-api-prod-3hji.onrender.com/api/products).
-- Pendientes: corrida de despliegue por imágenes, integración verde con e2e roja y sus dos reportes, corrida completa verde posterior y release `v7.0.0`. No se dan por verificados.
+- Primera corrida de despliegue por imágenes: [39540383471](https://github.com/Geronimo2001/ingsoft3/actions/runs/39540383471), verde en construcción, publicación, QA y PROD, para `f0ae5b4d0796f36db4108e1360acbdadaa95b629` (PR #41).
+- Pendientes: integración verde con e2e roja y sus dos reportes, corrida completa verde posterior con las suites y release `v7.0.0`. No se dan por verificados.
 
 ## Enlaces de este TP — TP6
 
@@ -1038,11 +1039,66 @@ El smoke verifica disponibilidad de la página, consultas a la base y el proxy,
 pero puede responder la versión anterior mientras Render despliega. No identifica
 la imagen ejecutada. Para cerrar esta etapa hay que revisar los Events de los
 cuatro servicios: origen Deploy Hook, etiqueta de la corrida y estado Live.
-Todavía no se afirma que el cambio del pipeline se haya ejecutado en main.
+El PR #41 se integró en `f0ae5b4d0796f36db4108e1360acbdadaa95b629`.
+La corrida `39540383471` terminó con los cuatro jobs exitosos, comprobados por
+la API de GitHub. El estudiante confirmó los dos servicios de QA Live con la
+etiqueta de esa corrida y la app cargando. Luego confirmó completar la revisión
+de PROD indicada en el chat. La revisión de Events corresponde al estudiante;
+el asistente no inspeccionó el panel privado de Render.
+
+## Primera prueba de integración y error encontrado
+
+Instalamos `@playwright/test` y configuramos reportes HTML, un reintento y tiempos
+acotados para QA. Vitest excluye `e2e/**`, manteniendo sus exclusiones habituales;
+los reportes generados por Playwright no se versionan.
+
+El primer caso en `frontend/e2e/api.spec.js` usa el fixture `request`, sin navegador
+ni dobles, contra `API_BASE_URL`. Crea un proveedor y producto con nombres que
+incluyen hora y UUID. Comprueba el 201 del alta, consulta por ID y verifica los
+datos, borra el producto y exige 404 al consultarlo otra vez. Finalmente elimina
+su proveedor y comprueba el 404. Si falla una comprobación intermedia intenta
+limpiar igualmente, sin borrar productos o proveedores ajenos.
+
+La preparación se validó con el descubrimiento de un caso por Playwright, los
+20 tests unitarios de frontend pasando con su cobertura y el build de producción
+exitoso. El estudiante ejecutó el caso contra QA y compartió el reporte local.
+El asistente revisó el error y la traza del reintento: proveedor creado (201),
+producto creado (201), producto consultado (200), producto borrado (204), producto
+ausente (404), proveedor borrado (204), pero consulta del proveedor ausente (500).
+La prueba falló también en el reintento: no se interpreta como flaky ni como una
+demora de arranque. Los DELETE respondieron correctamente, pero el último GET no
+permitió completar la verificación de limpieza. Esto todavía no cumple el mínimo
+de tres casos ni agrega los jobs de integración/e2e al pipeline.
+
+La consulta de `SuppliersController.GetById` incluía
+`Include(s => s.Products).ThenInclude(p => p.Supplier)`: volvía desde los productos
+al proveedor raíz. El asistente reprodujo con EF Core/Npgsql la excepción
+`NavigationBaseIncludeIgnored` al traducir esa consulta a SQL, sin conectarse a
+una base. EF ya completa esa relación inversa; eliminamos el `ThenInclude`
+redundante y la consulta corregida se traduce correctamente.
+Referencia: [cambio de comportamiento documentado por Microsoft](https://learn.microsoft.com/en-us/ef/core/what-is-new/ef-core-6.0/breaking-changes#navigationbaseincludeignored-is-now-an-error-by-default).
+
+La reproducción local confirma el defecto de la consulta, sin afirmar que se
+inspeccionaron los logs privados de Render. El test conserva la expectativa 404;
+no aceptamos 500 para conseguir verde. Para verificar la corrección contra QA
+hay que mergear el cambio, publicar y desplegar su nueva imagen, comprobarla Live
+y repetir el caso. La imagen anterior de QA seguirá fallando aunque el archivo
+local esté corregido.
+
+Después de la corrección pasaron los 42 casos unitarios de backend, sin omitidos,
+con 89,58 % de líneas y 93,18 % de ramas. La primera ejecución local de VSTest
+fue bloqueada por el sandbox al abrir su puerto de comunicación; se repitió con
+el permiso correspondiente y terminó correctamente. Estos unitarios no reemplazan
+la repetición pendiente contra la API real de QA.
 
 ## Uso de IA en esta etapa
 
 El asistente ayudó a interpretar la guía, preparar el cambio de los hooks y registrar
 las comprobaciones. La verificación incluye las descargas anónimas y la validación
 del workflow; el estudiante realiza la configuración de Render y confirma el Live.
-La declaración se ampliará con las suites y su verificación cuando se implementen.
+El asistente preparó también la configuración de Playwright y el primer caso de
+integración, verificando descubrimiento, unitarios y build. Tras el rojo compartido
+por el estudiante, revisó la traza y preparó la corrección de la consulta de
+proveedores, con reproducción de la excepción y traducción SQL corregida.
+La declaración se ampliará con las
+otras pruebas y su verificación cuando se implementen.
