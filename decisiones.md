@@ -1335,16 +1335,55 @@ conserva; el plan de IaC en cada PR es opcional y no se agrego en esta entrega.
 
 # Decisiones — TP9 DevSecOps y observabilidad
 
-- **Dependencias (preparacion local):** configuramos Dependabot semanal para
+- **Dependencias:** configuramos Dependabot semanal para
   NuGet (API y proyecto de tests, en directorios explicitos), npm (frontend) y
   GitHub Actions (pipeline). Las actualizaciones se proponen mediante PR; no
-  se habilito merge automatico. El archivo solo entra en funcionamiento cuando
-  este en la rama por defecto del remoto. Pendiente: integrar esta configuracion,
-  verificar las alertas y las actualizaciones de seguridad en GitHub, y analizar
-  un PR real con su cambio de version y su pipeline antes de que el estudiante
-  lo mergee. Todavia no hay un PR de Dependabot analizado o mergeado en este TP.
-- **Observabilidad (pendiente):** la API actual no declara `/health`; antes del
-  monitor agregaremos esa ruta con GET y HEAD. Faltan el ensayo DOWN/UP, medir
+  se habilito merge automatico. El estudiante integro la configuracion con squash
+  mediante el [PR #48](https://github.com/Geronimo2001/ingsoft3/pull/48), commit
+  `d35c53846f8d53d469c0b8a0d30335827f4708a4`. El 21/10/2026 confirmo que habilito
+  Dependabot alerts y security updates. La API mostro cinco alertas abiertas de
+  Vite y las actualizaciones de seguridad habilitadas, sin pausa.
+- **PR de actualizacion integrado:** analizamos el
+  [PR #57](https://github.com/Geronimo2001/ingsoft3/pull/57): Vite pasa de la
+  version instalada `7.3.6` a `7.3.7` (patch), y el rango de `package.json` pasa
+  de `^7.0.0` a `^7.3.7`, junto con su lockfile. Las cinco alertas indican
+  `7.3.7` como primera version corregida. Su
+  [changelog](https://github.com/vitejs/vite/blob/v7.3.7/packages/vite/CHANGELOG.md)
+  enumera correcciones de launch-editor, HTML y rutas del servidor; no anuncia
+  breaking changes en esta version. La
+  [corrida 39660309004](https://github.com/Geronimo2001/ingsoft3/actions/runs/39660309004)
+  termino verde para el SHA `62755f75e173010a7f59515531337f3770969830`: ambos
+  builds, tests unitarios y umbrales de cobertura pasaron. Integracion, e2e y
+  despliegues se omiten en PR por el workflow actual; se comprueban despues del
+  merge en `main`. Recomendamos este patch por las correcciones y las
+  verificaciones verdes, sin asumir riesgo cero. El estudiante realizo el merge
+  el 21/10/2026, commit `62b08eeb896ca1134d0186f63ee1eccc963ac2e9`. La API
+  confirmo las cinco alertas como `fixed` despues de integrar el PR. La
+  [corrida de main 39661215930](https://github.com/Geronimo2001/ingsoft3/actions/runs/39661215930)
+  aprobo ambos builds, deploy a QA, integracion y e2e. El job `deploy-prod`
+  quedo pendiente; no se da por finalizado el despliegue a produccion.
+- **Secretos y codigo:** la API de GitHub mostro secret scanning y push
+  protection habilitados el 21/10/2026. El estudiante activo CodeQL con Default
+  setup. La API confirmo `configured` y cuatro analisis terminados sobre `main`,
+  commit `62b08eeb896ca1134d0186f63ee1eccc963ac2e9`: C# (1999478807),
+  JavaScript/TypeScript (1999474285), Python (1999472469) y Actions (1999471167).
+  Todos devolvieron cero resultados, sin errores ni advertencias; la consulta de
+  alertas abiertas devolvio una lista vacia. No se inventan hallazgos para el
+  entregable: el primer analisis esta terminado. CodeQL busca patrones de
+  seguridad en el codigo propio; no reemplaza los tests ni las alertas sobre
+  dependencias, y cero hallazgos no garantiza ausencia de vulnerabilidades.
+- **Health preparado localmente:** agregamos `/health` con GET y HEAD; devuelve
+  HTTP 200 y `{"status":"ok"}` (HEAD sin cuerpo). Es un chequeo de disponibilidad
+  de la API, sin consultar PostgreSQL: no garantiza que todas las operaciones
+  funcionen. Conservamos los smoke tests existentes sobre `/api/products`, que
+  tambien comprueban una lectura de datos. Con el SDK local .NET 8.0.424 la API
+  compilo sin errores ni advertencias; pasaron los 42 casos unitarios existentes
+  y el gate de cobertura (89,58 % lineas, 93,18 % ramas, dentro del alcance del
+  TP5). Con la API conectada a PostgreSQL local verificamos GET 200 con su JSON,
+  HEAD 200 sin cuerpo y POST 405 con `Allow: GET, HEAD`. Pendiente: PR, pipeline,
+  despliegue y comprobacion GET/HEAD contra la URL real de produccion antes de
+  configurar el monitor.
+- **Observabilidad (pendiente):** faltan el ensayo DOWN/UP, medir
   cuanto tarda el aviso, pausar el monitor al terminar e instrumentar Sentry en
   backend y frontend. La operacion mas usada, la mas lenta y la tarjeta del
   tablero se registraran a partir de datos reales de produccion.
@@ -1353,6 +1392,13 @@ conserva; el plan de IaC en cada PR es opcional y no se agrego en esta entrega.
   la documentacion oficial de GitHub. Verificamos que el YAML se puede leer,
   que cubre los tres ecosistemas y los cuatro directorios con sus manifiestos,
   y que `git diff --check` no detecta errores de formato. El entorno restringio
-  la creacion de la rama en `.git`; se creo con el permiso local correspondiente. La validacion
-  de GitHub y las mediciones de produccion siguen pendientes. Por acuerdo con
+  la creacion de la rama en `.git`; se creo con el permiso local correspondiente.
+  Luego revisamos por el conector y la API de GitHub el merge de configuracion,
+  las protecciones, las alertas, el diff y los jobs del PR elegido, y consultamos
+  el changelog oficial. El asistente preparo tambien el health check y verifico
+  compilacion, suite y respuestas HTTP locales. `dotnet` no estaba en el PATH;
+  usamos el SDK ya instalado en `.dotnet/`. El sandbox bloqueo los sockets de
+  VSTest y las conexiones HTTP locales; repetimos esas comprobaciones con los
+  permisos correspondientes, sin cambiar los umbrales de cobertura.
+  Las mediciones de produccion siguen pendientes. Por acuerdo con
   el estudiante, el asistente no realiza pushes ni merges remotos.
