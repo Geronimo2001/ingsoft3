@@ -191,17 +191,20 @@ Para verificar despues del PR, pipeline y despliegue a PROD:
 
 1. Usar el frontend de produccion: Inicio, Productos y stock, Proveedores y
    algunas operaciones normales. Esto genera mediciones reales.
-2. Abrir una vez `https://ingsoft3-api-prod-3hji.onrender.com/api/falla`.
-   Devuelve HTTP 500 intencionalmente para generar el error de prueba del TP9.
-3. En el proyecto backend de Sentry, comprobar el error en Issues y las
+2. En el proyecto backend de Sentry, comprobar el error del ensayo en
+   [Issues](https://ingsoft3.sentry.io/issues/7805449120/). Se genero con el
+   endpoint temporal `/api/falla`, retirado del codigo despues de verificarlo.
+3. Comprobar las
    operaciones en Traces o en la tabla de transacciones del dashboard.
    En frontend, filtrar por el hostname de PROD para ver las mediciones.
 4. Comparar cantidad de solicitudes y P95 de las operaciones normales: registrar
    la mas usada y la mas lenta, el periodo observado y sus valores, y crear una
    tarjeta en el tablero a partir de ese dato. El endpoint de prueba no es una
    operacion normal de inventario.
-5. Retirar `/api/falla` del codigo mediante otro PR despues de verificar el
-   error. La ruta es temporal y no forma parte de las funcionalidades de la app.
+5. Si los datos vencieron antes de la defensa, generar trafico nuevo. Para
+   repetir el error, agregar temporalmente `/api/falla` por un PR y retirarlo
+   por otro despues de verificar su recepcion. No dejar la ruta de prueba en
+   produccion al terminar.
 
 Las comprobaciones locales con un receptor simulado verifican la generacion de
 eventos y trazas; la recepcion en los proyectos reales se verifica despues del

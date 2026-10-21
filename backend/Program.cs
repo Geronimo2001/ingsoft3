@@ -57,10 +57,6 @@ app.MapControllers();
 app.MapMethods("/health", new[] { "GET", "HEAD" },
     () => Results.Ok(new { status = "ok" }));
 
-// TP9: endpoint temporal para verificar el error en Sentry; retirar tras el ensayo.
-app.MapGet("/api/falla", string () =>
-    throw new InvalidOperationException("Falla de prueba del TP9"));
-
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();

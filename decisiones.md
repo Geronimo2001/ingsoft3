@@ -1335,133 +1335,86 @@ conserva; el plan de IaC en cada PR es opcional y no se agrego en esta entrega.
 
 # Decisiones — TP9 DevSecOps y observabilidad
 
-- **Dependencias:** configuramos Dependabot semanal para
-  NuGet (API y proyecto de tests, en directorios explicitos), npm (frontend) y
-  GitHub Actions (pipeline). Las actualizaciones se proponen mediante PR; no
-  se habilito merge automatico. El estudiante integro la configuracion con squash
-  mediante el [PR #48](https://github.com/Geronimo2001/ingsoft3/pull/48), commit
-  `d35c53846f8d53d469c0b8a0d30335827f4708a4`. El 21/10/2026 confirmo que habilito
-  Dependabot alerts y security updates. La API mostro cinco alertas abiertas de
-  Vite y las actualizaciones de seguridad habilitadas, sin pausa.
-- **PR de actualizacion integrado:** analizamos el
-  [PR #57](https://github.com/Geronimo2001/ingsoft3/pull/57): Vite pasa de la
-  version instalada `7.3.6` a `7.3.7` (patch), y el rango de `package.json` pasa
-  de `^7.0.0` a `^7.3.7`, junto con su lockfile. Las cinco alertas indican
-  `7.3.7` como primera version corregida. Su
-  [changelog](https://github.com/vitejs/vite/blob/v7.3.7/packages/vite/CHANGELOG.md)
-  enumera correcciones de launch-editor, HTML y rutas del servidor; no anuncia
-  breaking changes en esta version. La
-  [corrida 39660309004](https://github.com/Geronimo2001/ingsoft3/actions/runs/39660309004)
-  termino verde para el SHA `62755f75e173010a7f59515531337f3770969830`: ambos
-  builds, tests unitarios y umbrales de cobertura pasaron. Integracion, e2e y
-  despliegues se omiten en PR por el workflow actual; se comprueban despues del
-  merge en `main`. Recomendamos este patch por las correcciones y las
-  verificaciones verdes, sin asumir riesgo cero. El estudiante realizo el merge
-  el 21/10/2026, commit `62b08eeb896ca1134d0186f63ee1eccc963ac2e9`. La API
-  confirmo las cinco alertas como `fixed` despues de integrar el PR. La
-  [corrida de main 39661215930](https://github.com/Geronimo2001/ingsoft3/actions/runs/39661215930)
-  aprobo ambos builds, deploy a QA, integracion y e2e. El job `deploy-prod`
-  quedo pendiente; no se da por finalizado el despliegue a produccion.
-- **Secretos y codigo:** la API de GitHub mostro secret scanning y push
-  protection habilitados el 21/10/2026. El estudiante activo CodeQL con Default
-  setup. La API confirmo `configured` y cuatro analisis terminados sobre `main`,
-  commit `62b08eeb896ca1134d0186f63ee1eccc963ac2e9`: C# (1999478807),
-  JavaScript/TypeScript (1999474285), Python (1999472469) y Actions (1999471167).
-  Todos devolvieron cero resultados, sin errores ni advertencias; la consulta de
-  alertas abiertas devolvio una lista vacia. No se inventan hallazgos para el
-  entregable: el primer analisis esta terminado. CodeQL busca patrones de
-  seguridad en el codigo propio; no reemplaza los tests ni las alertas sobre
-  dependencias, y cero hallazgos no garantiza ausencia de vulnerabilidades.
-  Tras integrar `/health`, el commit remoto
-  `8125b31418f8095815d9f47cac0f5c0c671a6416` disparo dos workflows independientes:
-  [CI 39663836984](https://github.com/Geronimo2001/ingsoft3/actions/runs/39663836984)
-  y [CodeQL 39663837159](https://github.com/Geronimo2001/ingsoft3/actions/runs/39663837159).
-  CodeQL termino con sus cuatro jobs verdes; CI aprobo builds, QA, integracion
-  y e2e; despues de la aprobacion del estudiante la corrida completa de CI
-  termino en `success`, incluido `deploy-prod`. Solo CI despliega y
-  requiere la aprobacion de production. Actualmente no hay una dependencia
-  automatica entre ambos workflows: revisamos tambien CodeQL antes de aprobar
-  PROD; un job de analisis verde no implica que no existan alertas.
-- **Health desplegado y comprobado:** agregamos `/health` con GET y HEAD; devuelve
-  HTTP 200 y `{"status":"ok"}` (HEAD sin cuerpo). Es un chequeo de disponibilidad
-  de la API, sin consultar PostgreSQL: no garantiza que todas las operaciones
-  funcionen. Conservamos los smoke tests existentes sobre `/api/products`, que
-  tambien comprueban una lectura de datos. Con el SDK local .NET 8.0.424 la API
-  compilo sin errores ni advertencias; pasaron los 42 casos unitarios existentes
-  y el gate de cobertura (89,58 % lineas, 93,18 % ramas, dentro del alcance del
-  TP5). Con la API conectada a PostgreSQL local verificamos GET 200 con su JSON,
-  HEAD 200 sin cuerpo y POST 405 con `Allow: GET, HEAD`. El estudiante integro
-  el cambio y aprobo PROD. El 21/10/2026 comprobamos directamente
-  `https://ingsoft3-api-prod-3hji.onrender.com/health`: GET devolvio HTTP 200
-  con el JSON esperado y HEAD HTTP 200 sin cuerpo. Esto comprueba el endpoint
-  publicado; su respuesta no incluye un SHA para identificar la imagen activa.
-- **Monitor externo:** el estudiante confirmo que creo el monitor en UptimeRobot
-  y que aparece Up. La configuracion indicada es HTTP(s) sobre `/health` de la
-  API PROD, intervalo de cinco minutos y alertas por email. Esta confirmacion
-  procede del estudiante; el asistente verifico el endpoint publico, no el
-  panel privado del monitor. Durante el ensayo, el 21/10/2026 el estudiante
-  confirmo que recibio el email DOWN y compartio su captura: UptimeRobot indica
-  `API PROD - Stock is down` para
-  `https://ingsoft3-api-prod-3hji.onrender.com/health`, con deteccion desde Europa.
-  La captura acredita el aviso de caida, pero no muestra la hora de recepcion
-  ni la de suspension; la hora del nombre del archivo corresponde a la captura
-  y no se usa para calcular el tiempo de deteccion. El estudiante no conservo
-  los horarios exactos y estima aproximadamente cinco minutos entre etapas del
-  ejercicio. Registramos ese valor como estimacion del tiempo de aviso, no como
-  medicion cronometrada ni como garantia del intervalo de deteccion. Luego el
-  estudiante confirmo que reanudo la API, recibio el email UP y dejo el monitor
-  pausado. La recepcion del UP y la pausa se registran por su confirmacion;
-  el panel privado y ese email no fueron consultados por el asistente. El ensayo
-  DOWN/UP queda cerrado y el monitor se reactivara cuando se repita en defensa.
-  Despues de esa confirmacion comprobamos nuevamente el `/health` publico:
-  devolvio HTTP 200 y `{"status":"ok"}`, confirmando que la API responde.
-- **Sentry (preparado, despliegue pendiente):** el estudiante creo dos proyectos
-  y proporciono sus DSN. Integramos `Sentry.AspNetCore` 6.12.1 en .NET 8 y
-  `@sentry/react` 11.8.0 en React 19. Backend lee `SENTRY_DSN` del entorno y
-  queda desactivado sin valor. Frontend usa su DSN publico y se activa solo en
-  el hostname de PROD, que tambien identifica su entorno. El DSN permite enviar
-  eventos; no es un token para leer ni administrar el proyecto. Inicializamos
-  Sentry antes de importar la app y conectamos los tres hooks de errores de
-  `createRoot`. BrowserTracing mide solicitudes y propaga el contexto a `/api/`;
-  la integracion ASP.NET Core registra automaticamente su middleware de trazas.
-  Elegimos muestreo 1.0 para observar todo el trafico reducido del ejercicio.
-  No habilitamos Replay ni logs; desactivamos datos de usuario y, en frontend,
-  cookies, headers, cuerpos HTTP y parametros de consulta. Agregamos el endpoint
-  temporal `/api/falla`, que lanza una excepcion controlada: se retirara por PR
-  al confirmar el error real en Sentry.
-- **Verificacion de Sentry:** ambos builds locales pasaron. Backend: 42 casos,
-  cobertura 92 % de lineas y 93,18 % de ramas; frontend: 20 casos, 76,31 % de
-  lineas y 100 % de ramas. Se conservaron el alcance y los umbrales existentes,
-  y ambos gates pasaron. El modulo nuevo `instrument.ts` esta incluido en el
-  alcance del frontend, aunque el envio se verifica con navegador y no con los
-  unitarios en Node. Un receptor temporal comprobo que backend arranca sin DSN
-  y no emite eventos, y con DSN genera el error 500 y transacciones nombradas
-  para `/api/products`, `/api/dashboard`, `/api/suppliers` y `/health`.
-  Probamos el build del frontend con `/api`, igual que en Docker, usando
-  Playwright/Chromium a 1440x1000 (Browser plugin no disponible y agent-browser
-  ausente). El recorrido fue Inicio -> Productos -> abrir formulario -> cancelar;
-  identidad de pagina correcta, contenido visible, sin overlay, sin errores ni
-  advertencias antes del error intencional y captura revisada fuera de Git.
-  Para probar la activacion exclusiva de PROD se simulo su hostname sirviendo
-  el build local; se interceptaron los envios, sin conectar a la app de PROD ni
-  al Sentry real. Se comprobaron un evento de error y spans de frontend, su
-  etiqueta de entorno y los headers de trazado hacia la API. En localhost la
-  captura quedo desactivada. Estas pruebas no reemplazan ver los datos reales
-  despues del despliegue: faltan cargar `SENTRY_DSN` en Render PROD, integrar el
-  PR, desplegar, observar el error y medir uso/P95 reales. La operacion mas
-  usada, la mas lenta y la tarjeta se registraran con esos datos.
-- **Problemas y uso de IA:** el asistente ayudo a interpretar la consigna,
-  revisar la estructura y preparar la configuracion de Dependabot consultando
-  la documentacion oficial de GitHub. Verificamos que el YAML se puede leer,
-  que cubre los tres ecosistemas y los cuatro directorios con sus manifiestos,
-  y que `git diff --check` no detecta errores de formato. El entorno restringio
-  la creacion de la rama en `.git`; se creo con el permiso local correspondiente.
-  Luego revisamos por el conector y la API de GitHub el merge de configuracion,
-  las protecciones, las alertas, el diff y los jobs del PR elegido, y consultamos
-  el changelog oficial. El asistente preparo tambien el health check y verifico
-  compilacion, suite y respuestas HTTP locales. `dotnet` no estaba en el PATH;
-  usamos el SDK ya instalado en `.dotnet/`. El sandbox bloqueo los sockets de
-  VSTest y las conexiones HTTP locales; repetimos esas comprobaciones con los
-  permisos correspondientes, sin cambiar los umbrales de cobertura.
-  Las mediciones de produccion siguen pendientes. Por acuerdo con
-  el estudiante, el asistente no realiza pushes ni merges remotos.
+- **Dependabot:** revision semanal de NuGet (API y tests en directorios
+  explicitos), npm y GitHub Actions. Configuracion integrada por el estudiante
+  en el [PR #48](https://github.com/Geronimo2001/ingsoft3/pull/48), con alerts y
+  security updates habilitados, sin merge automatico. Elegimos el
+  [PR #57](https://github.com/Geronimo2001/ingsoft3/pull/57): Vite instalado
+  `7.3.6` -> `7.3.7` (patch), manifiesto y lockfile actualizados. Corrige las
+  cinco alertas detectadas; su changelog no anuncia breaking changes. Aceptamos
+  el cambio por ese alcance y los builds, unitarios y cobertura verdes de la
+  [corrida del PR](https://github.com/Geronimo2001/ingsoft3/actions/runs/39660309004).
+  Despues del merge las cinco alertas quedaron `fixed`; tambien pasaron QA,
+  integracion y e2e de main. Las actualizaciones mayores quedaron para revisar.
+- **Codigo y secretos:** verificamos secret scanning y push protection activos.
+  CodeQL Default setup termino sus cuatro analisis de C#, JS/TS, Python y
+  Actions sin errores, advertencias ni hallazgos en el primer analisis de main.
+  Cero hallazgos no garantiza ausencia de vulnerabilidades. CodeQL y CI son
+  workflows independientes: antes de aprobar PROD revisamos ambos. La aprobacion
+  pertenece al environment production de CI; CodeQL no despliega.
+- **Monitor externo:** UptimeRobot, `API PROD - Stock`, consulta cada cinco
+  minutos `https://ingsoft3-api-prod-3hji.onrender.com/health` y alerta por email.
+  Agregamos GET y HEAD (200; HEAD sin cuerpo). Es disponibilidad de la API,
+  sin consultar la BD; conservamos los smoke tests sobre operaciones reales.
+  El estudiante suspendio y reanudo la API, mostro el email DOWN y confirmo el
+  UP y la pausa final. Estimo unos cinco minutos entre etapas: no conservo los
+  horarios exactos, asi que es una estimacion, no una medicion cronometrada.
+  Verificamos la recuperacion del health por HTTP. El monitor queda pausado
+  para evitar mantener Render despierto; se reactiva para repetir en defensa.
+- **Sentry:** `Sentry.AspNetCore` 6.12.1 y `@sentry/react` 11.8.0. Backend lee
+  `SENTRY_DSN` del entorno y queda desactivado sin valor; frontend usa su DSN
+  publico y se activa solo en el hostname de PROD, con los hooks de React 19.
+  El DSN permite enviar eventos, no leer ni administrar el proyecto. Muestreo
+  1.0 para el trafico reducido del ejercicio; sin Replay ni logs, con captura
+  automatica de usuario desactivada y sin cookies, headers, cuerpos ni query
+  params en frontend. El estudiante aprobo el despliegue del commit
+  `951ac49044e1bcde777f48d3e03d82fc4be14a35` mediante la
+  [corrida 39672983715](https://github.com/Geronimo2001/ingsoft3/actions/runs/39672983715).
+- **Problema y solucion:** `SENTRY_DSN` estaba en Secret Files de Render, como
+  archivo, y el codigo esperaba una variable. La guardamos en Environment
+  Variables de la API PROD, sin modificar la conexion a BD. Save only guardo
+  la configuracion; el estudiante aprobo reejecutar deploy-prod con la misma
+  imagen (intento 2, verde). Restart no incorpora variables guardadas sin
+  desplegar. Luego `/api/falla` devolvio el 500 esperado a las 17:59:56 de
+  Cordoba del 21/10/2026 y verificamos en Sentry el error real
+  [STOCK-BACKEND-1](https://ingsoft3.sentry.io/issues/7805449120/),
+  `System.InvalidOperationException: Falla de prueba del TP9`, Unhandled,
+  asociado a `GET /api/falla`. El archivo previo de Render no se elimino.
+- **Uso y demoras:** el 21/10/2026, aproximadamente a las 18:06 de Cordoba
+  (UTC-3), en [Backend Overview, ultima hora](https://ingsoft3.sentry.io/dashboard/10519798/?project=4512296046559232&statsPeriod=1h),
+  proyecto stock-backend, All Envs: la mas usada fue `GET /api/products`,
+  **0,150 solicitudes/min**, P50 51,77 ms y P95 803,04 ms. La de mayor P95
+  entre las operaciones de la API fue `GET /api/dashboard`, **P95 2,51 s**,
+  P50 225,28 ms y 0,0500/min. `GET /api/suppliers`: 0,0667/min y P95 1,13 s.
+  Son datos de una muestra pequena del ejercicio; no prueban una causa ni
+  representan carga habitual de usuarios. Health y el error provocado no son
+  operaciones normales de inventario. En [Frontend Overview](https://ingsoft3.sentry.io/dashboard/10519800/?project=4512296042496000)
+  verificamos tambien datos reales: Pageload P95 4,74 s y solicitudes GET,
+  POST y PUT del dominio de PROD.
+- **Feedback al tablero:** creamos la [issue #64](https://github.com/Geronimo2001/ingsoft3/issues/64),
+  "Investigar latencia de GET /api/dashboard: P95 de 2,51 s", y comprobamos
+  que quedo en **Todo** del [tablero del TP3](https://github.com/users/Geronimo2001/projects/1).
+  Incluye los valores observados, su periodo y criterios: inspeccionar una
+  traza lenta, comparar servicio recien activado y ya activo, registrar N/P50/P95
+  y decidir una mejora con evidencia. No atribuimos la causa a la BD ni al
+  arranque en frio sin comprobarlo. El conector no permitio crear la issue y
+  la CLI no tiene read:project; se uso el navegador sin ampliar permisos.
+- **Verificacion y uso de IA:** el asistente ayudo con configuracion, codigo,
+  diagnostico y documentacion; el estudiante creo las cuentas, uso la app,
+  hizo pushes y merges y aprobo production. Consultamos documentacion oficial,
+  revisamos checks y paneles reales y probamos localmente builds, 42 casos de
+  backend y 20 de frontend con sus gates (backend: 92 % lineas, 93,18 % ramas;
+  frontend: 76,31 % lineas, 100 % ramas). Los umbrales no se redujeron. Con un
+  receptor local verificamos errores, trazas, desactivacion sin DSN y en
+  localhost, y propagacion front -> API. Playwright/Chromium comprobo la UI
+  sin errores; la recepcion real se verifico despues en Sentry. Usamos el SDK
+  local `.dotnet/` y permisos para los sockets bloqueados por el sandbox.
+  El asistente no realiza pushes ni merges remotos.
+- **Cierre pendiente:** retiramos `/api/falla` del codigo despues de registrar
+  el error. La compilacion paso sin errores ni advertencias; comprobamos en
+  local GET/HEAD de `/health` en 200, lectura de productos en 200 y `/api/falla`
+  en 404. El retiro y esta documentacion estan en `tp9/cierre`; faltan el PR,
+  el despliegue y comprobar el 404 en PROD. El evento previo permanece en Sentry.
+  Despues corresponde crear el tag y la release `v9.0.0` sobre el SHA realmente
+  desplegado. Los datos de Sentry y del monitor tienen retencion limitada;
+  antes de una defensa tardia hay que generar trafico y repetir los ensayos.
