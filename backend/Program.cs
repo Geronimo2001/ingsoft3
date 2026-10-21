@@ -47,6 +47,8 @@ var app = builder.Build();
 
 app.UseCors("Frontend");
 app.MapControllers();
+app.MapMethods("/health", new[] { "GET", "HEAD" },
+    () => Results.Ok(new { status = "ok" }));
 
 using (var scope = app.Services.CreateScope())
 {

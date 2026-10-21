@@ -152,6 +152,23 @@ npm run build
 - CRUD de proveedores y vista de productos asociados.
 - Mensajes claros de exito y error en la interfaz.
 
+## TP9: comprobacion de disponibilidad
+
+La API expone `/health` con GET y HEAD. GET devuelve HTTP 200 y
+`{"status":"ok"}`; HEAD devuelve el mismo estado sin cuerpo, para monitores
+que usan ese metodo. Esta ruta comprueba que la API responde; no consulta la
+base de datos ni verifica todas las funciones de la aplicacion.
+
+Despues del despliegue se puede comprobar con:
+
+```bash
+curl -i https://ingsoft3-api-prod-3hji.onrender.com/health
+curl -I https://ingsoft3-api-prod-3hji.onrender.com/health
+```
+
+El monitor externo del ejercicio debe pausarse al terminar la prueba de caida
+y recuperacion, para no mantener los servicios gratuitos despiertos todo el mes.
+
 ## TP8: preprod con infraestructura como codigo
 
 La carpeta [`infra/`](infra/README.md) declara un entorno nuevo con Terraform:
