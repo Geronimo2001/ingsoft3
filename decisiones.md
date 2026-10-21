@@ -1332,3 +1332,27 @@ de que el estudiante confirme el estado Live y complete el cierre indicado.
 Version de entrega: [v8.0.0](https://github.com/Geronimo2001/ingsoft3/releases/tag/v8.0.0),
 con la infraestructura integrada mediante PR a `main`. El workflow del TP7 se
 conserva; el plan de IaC en cada PR es opcional y no se agrego en esta entrega.
+
+# Decisiones — TP9 DevSecOps y observabilidad
+
+- **Dependencias (preparacion local):** configuramos Dependabot semanal para
+  NuGet (API y proyecto de tests, en directorios explicitos), npm (frontend) y
+  GitHub Actions (pipeline). Las actualizaciones se proponen mediante PR; no
+  se habilito merge automatico. El archivo solo entra en funcionamiento cuando
+  este en la rama por defecto del remoto. Pendiente: integrar esta configuracion,
+  verificar las alertas y las actualizaciones de seguridad en GitHub, y analizar
+  un PR real con su cambio de version y su pipeline antes de que el estudiante
+  lo mergee. Todavia no hay un PR de Dependabot analizado o mergeado en este TP.
+- **Observabilidad (pendiente):** la API actual no declara `/health`; antes del
+  monitor agregaremos esa ruta con GET y HEAD. Faltan el ensayo DOWN/UP, medir
+  cuanto tarda el aviso, pausar el monitor al terminar e instrumentar Sentry en
+  backend y frontend. La operacion mas usada, la mas lenta y la tarjeta del
+  tablero se registraran a partir de datos reales de produccion.
+- **Problemas y uso de IA:** el asistente ayudo a interpretar la consigna,
+  revisar la estructura y preparar la configuracion de Dependabot consultando
+  la documentacion oficial de GitHub. Verificamos que el YAML se puede leer,
+  que cubre los tres ecosistemas y los cuatro directorios con sus manifiestos,
+  y que `git diff --check` no detecta errores de formato. El entorno restringio
+  la creacion de la rama en `.git`; se creo con el permiso local correspondiente. La validacion
+  de GitHub y las mediciones de produccion siguen pendientes. Por acuerdo con
+  el estudiante, el asistente no realiza pushes ni merges remotos.

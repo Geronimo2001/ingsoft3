@@ -1,0 +1,21 @@
+version: 2
+updates:
+  # Paquetes de la API y de su proyecto de tests.
+  - package-ecosystem: "nuget"
+    directories:
+      - "/backend"
+      - "/backend/tests/StockControl.Api.Tests"
+    schedule:
+      interval: "weekly"
+
+  # Librerias de React/Vite y herramientas de tests del frontend.
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+
+  # Las actions del pipeline tambien son dependencias.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
