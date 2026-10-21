@@ -1,5 +1,16 @@
 # Decisiones 
 
+## Enlaces del TP7 — en curso
+
+- Paquete backend: [ingsoft3-tp01-backend](https://github.com/users/Geronimo2001/packages/container/package/ingsoft3-tp01-backend).
+- Paquete frontend: [ingsoft3-tp01-frontend](https://github.com/users/Geronimo2001/packages/container/package/ingsoft3-tp01-frontend).
+- Etiqueta inicial comprobada en ambos: `sha-5233120fd1f938f890b8712275adef6c37dab39f`, publicada por la [corrida de cierre del TP6](https://github.com/Geronimo2001/ingsoft3/actions/runs/39455587456).
+- Frontend QA: [ingsoft3-front-qa-6z2e.onrender.com](https://ingsoft3-front-qa-6z2e.onrender.com/).
+- API QA: [ingsoft3.onrender.com](https://ingsoft3.onrender.com/api/products).
+- Frontend PROD: [ingsoft3-front-prod-553q.onrender.com](https://ingsoft3-front-prod-553q.onrender.com/).
+- API PROD: [ingsoft3-api-prod-3hji.onrender.com](https://ingsoft3-api-prod-3hji.onrender.com/api/products).
+- Pendientes: corrida de despliegue por imágenes, integración verde con e2e roja y sus dos reportes, corrida completa verde posterior y release `v7.0.0`. No se dan por verificados.
+
 ## Enlaces de este TP — TP6
 
 - Paquete backend: [ingsoft3-tp01-backend](https://github.com/users/Geronimo2001/packages/container/package/ingsoft3-tp01-backend).
@@ -967,3 +978,71 @@ Estos puntos todavía no se implementaron ni se dan por verificados:
 - El estudiante agregará personalmente la declaración de uso de IA del TP6.
 - Incorporar las notas finales al repositorio y completar los problemas encontrados
   y sus soluciones; el tag v6.0.0 queda como referencia fija de la versión desplegada.
+
+# Decisiones — TP7 Contenedores, integración y e2e
+
+## De promover código a promover imágenes
+
+En TP6 Render reconstruía el mismo commit por separado en QA y PROD. Aunque el
+código fuera el mismo, las construcciones podían resolver dependencias o imágenes
+base distintas. Ahora cada entorno debe ejecutar la imagen publicada en GHCR:
+build once, deploy many. Conservamos los pasos de publicación del TP6 y cambiamos
+los dos despliegues para enviar `imgURL`, en lugar de `ref`, al hook de Render.
+El frontend y el backend son imágenes distintas; para cada componente, QA y PROD
+reciben la misma referencia `sha-<commit completo>` de la corrida.
+
+Los logs muestran las referencias solicitadas sin mostrar los hooks privados.
+`--get --data-urlencode` agrega correctamente `imgURL` al hook, que ya contiene
+su clave como parámetro. PROD sigue dependiendo de QA y de la aprobación del
+environment `production`. Las suites de integración y e2e se incorporarán después.
+
+La etiqueta permite relacionar la imagen con su código, pero alguien con permisos
+puede sobrescribirla. No publicamos `latest`, porque es un puntero que cambia y
+no identifica la versión que queremos promover. El digest identifica el contenido
+exacto. No reejecutaremos corridas antiguas para reconstruir una imagen que queremos
+recuperar: el despliegue debe referirse a la imagen ya publicada.
+
+## Verificación inicial y configuración de Render
+
+La corrida `39455587456` publicó ambas imágenes del commit
+`5233120fd1f938f890b8712275adef6c37dab39f`. El asistente comprobó los pasos exitosos
+por la API de GitHub y que no había corridas esperando aprobación en esa consulta.
+El 21/10/2026 descargó ambas con `docker pull --platform linux/amd64`, usando una
+configuración temporal sin credenciales para GHCR, sin modificar la sesión habitual
+de Docker del estudiante. Las dos descargas terminaron correctamente:
+
+- Backend: `sha256:039721dd3132bf03f620a2afbeb56b092c7952b215515bc99116a43854a0210f`.
+- Frontend: `sha256:dc5e6a53821cd958e25c35cb3dc94b823907008510dfea72cdbbefda2981574c`.
+
+El estudiante confirmó el cambio de fuente del frontend de QA a Existing Image y,
+después de recibir el comando de prueba por hook, informó que quedó Live y la app
+cargó. Luego confirmó el cambio de fuente de los otros tres servicios. Se conserva
+la configuración de los servicios existentes, en lugar de crear otros con nuevas
+URLs. La confirmación de Render corresponde al estudiante; el asistente no accedió
+a sus Events. La etiqueta inicial es el punto de partida de Settings: cada corrida
+posterior debe indicar su propia etiqueta mediante `imgURL`.
+
+Durante la prueba, el asistente recibió HTTP 200 para la página del frontend,
+respuestas HTML de error 502 al consultar la API a través del frontend y timeouts
+de 20 segundos contra el backend directo. Después el estudiante informó que cargó.
+Es compatible con un arranque en frío, sin confirmar la causa mediante logs.
+
+Cada backend conserva `ConnectionStrings__DefaultConnection` con su base de Neon.
+La imagen del frontend contiene los archivos compilados y usa `/api`; al arrancar,
+nginx toma `BACKEND_URL` y `DNS_RESOLVER` de su entorno. Esa configuración permite
+usar la misma imagen en QA y PROD sin recompilarla.
+
+## Cómo comprobaremos el despliegue
+
+El smoke verifica disponibilidad de la página, consultas a la base y el proxy,
+pero puede responder la versión anterior mientras Render despliega. No identifica
+la imagen ejecutada. Para cerrar esta etapa hay que revisar los Events de los
+cuatro servicios: origen Deploy Hook, etiqueta de la corrida y estado Live.
+Todavía no se afirma que el cambio del pipeline se haya ejecutado en main.
+
+## Uso de IA en esta etapa
+
+El asistente ayudó a interpretar la guía, preparar el cambio de los hooks y registrar
+las comprobaciones. La verificación incluye las descargas anónimas y la validación
+del workflow; el estudiante realiza la configuración de Render y confirma el Live.
+La declaración se ampliará con las suites y su verificación cuando se implementen.
