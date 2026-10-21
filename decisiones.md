@@ -1372,7 +1372,17 @@ conserva; el plan de IaC en cada PR es opcional y no se agrego en esta entrega.
   entregable: el primer analisis esta terminado. CodeQL busca patrones de
   seguridad en el codigo propio; no reemplaza los tests ni las alertas sobre
   dependencias, y cero hallazgos no garantiza ausencia de vulnerabilidades.
-- **Health preparado localmente:** agregamos `/health` con GET y HEAD; devuelve
+  Tras integrar `/health`, el commit remoto
+  `8125b31418f8095815d9f47cac0f5c0c671a6416` disparo dos workflows independientes:
+  [CI 39663836984](https://github.com/Geronimo2001/ingsoft3/actions/runs/39663836984)
+  y [CodeQL 39663837159](https://github.com/Geronimo2001/ingsoft3/actions/runs/39663837159).
+  CodeQL termino con sus cuatro jobs verdes; CI aprobo builds, QA, integracion
+  y e2e; despues de la aprobacion del estudiante la corrida completa de CI
+  termino en `success`, incluido `deploy-prod`. Solo CI despliega y
+  requiere la aprobacion de production. Actualmente no hay una dependencia
+  automatica entre ambos workflows: revisamos tambien CodeQL antes de aprobar
+  PROD; un job de analisis verde no implica que no existan alertas.
+- **Health desplegado y comprobado:** agregamos `/health` con GET y HEAD; devuelve
   HTTP 200 y `{"status":"ok"}` (HEAD sin cuerpo). Es un chequeo de disponibilidad
   de la API, sin consultar PostgreSQL: no garantiza que todas las operaciones
   funcionen. Conservamos los smoke tests existentes sobre `/api/products`, que
@@ -1380,13 +1390,66 @@ conserva; el plan de IaC en cada PR es opcional y no se agrego en esta entrega.
   compilo sin errores ni advertencias; pasaron los 42 casos unitarios existentes
   y el gate de cobertura (89,58 % lineas, 93,18 % ramas, dentro del alcance del
   TP5). Con la API conectada a PostgreSQL local verificamos GET 200 con su JSON,
-  HEAD 200 sin cuerpo y POST 405 con `Allow: GET, HEAD`. Pendiente: PR, pipeline,
-  despliegue y comprobacion GET/HEAD contra la URL real de produccion antes de
-  configurar el monitor.
-- **Observabilidad (pendiente):** faltan el ensayo DOWN/UP, medir
-  cuanto tarda el aviso, pausar el monitor al terminar e instrumentar Sentry en
-  backend y frontend. La operacion mas usada, la mas lenta y la tarjeta del
-  tablero se registraran a partir de datos reales de produccion.
+  HEAD 200 sin cuerpo y POST 405 con `Allow: GET, HEAD`. El estudiante integro
+  el cambio y aprobo PROD. El 21/10/2026 comprobamos directamente
+  `https://ingsoft3-api-prod-3hji.onrender.com/health`: GET devolvio HTTP 200
+  con el JSON esperado y HEAD HTTP 200 sin cuerpo. Esto comprueba el endpoint
+  publicado; su respuesta no incluye un SHA para identificar la imagen activa.
+- **Monitor externo:** el estudiante confirmo que creo el monitor en UptimeRobot
+  y que aparece Up. La configuracion indicada es HTTP(s) sobre `/health` de la
+  API PROD, intervalo de cinco minutos y alertas por email. Esta confirmacion
+  procede del estudiante; el asistente verifico el endpoint publico, no el
+  panel privado del monitor. Durante el ensayo, el 21/10/2026 el estudiante
+  confirmo que recibio el email DOWN y compartio su captura: UptimeRobot indica
+  `API PROD - Stock is down` para
+  `https://ingsoft3-api-prod-3hji.onrender.com/health`, con deteccion desde Europa.
+  La captura acredita el aviso de caida, pero no muestra la hora de recepcion
+  ni la de suspension; la hora del nombre del archivo corresponde a la captura
+  y no se usa para calcular el tiempo de deteccion. El estudiante no conservo
+  los horarios exactos y estima aproximadamente cinco minutos entre etapas del
+  ejercicio. Registramos ese valor como estimacion del tiempo de aviso, no como
+  medicion cronometrada ni como garantia del intervalo de deteccion. Luego el
+  estudiante confirmo que reanudo la API, recibio el email UP y dejo el monitor
+  pausado. La recepcion del UP y la pausa se registran por su confirmacion;
+  el panel privado y ese email no fueron consultados por el asistente. El ensayo
+  DOWN/UP queda cerrado y el monitor se reactivara cuando se repita en defensa.
+  Despues de esa confirmacion comprobamos nuevamente el `/health` publico:
+  devolvio HTTP 200 y `{"status":"ok"}`, confirmando que la API responde.
+- **Sentry (preparado, despliegue pendiente):** el estudiante creo dos proyectos
+  y proporciono sus DSN. Integramos `Sentry.AspNetCore` 6.12.1 en .NET 8 y
+  `@sentry/react` 11.8.0 en React 19. Backend lee `SENTRY_DSN` del entorno y
+  queda desactivado sin valor. Frontend usa su DSN publico y se activa solo en
+  el hostname de PROD, que tambien identifica su entorno. El DSN permite enviar
+  eventos; no es un token para leer ni administrar el proyecto. Inicializamos
+  Sentry antes de importar la app y conectamos los tres hooks de errores de
+  `createRoot`. BrowserTracing mide solicitudes y propaga el contexto a `/api/`;
+  la integracion ASP.NET Core registra automaticamente su middleware de trazas.
+  Elegimos muestreo 1.0 para observar todo el trafico reducido del ejercicio.
+  No habilitamos Replay ni logs; desactivamos datos de usuario y, en frontend,
+  cookies, headers, cuerpos HTTP y parametros de consulta. Agregamos el endpoint
+  temporal `/api/falla`, que lanza una excepcion controlada: se retirara por PR
+  al confirmar el error real en Sentry.
+- **Verificacion de Sentry:** ambos builds locales pasaron. Backend: 42 casos,
+  cobertura 92 % de lineas y 93,18 % de ramas; frontend: 20 casos, 76,31 % de
+  lineas y 100 % de ramas. Se conservaron el alcance y los umbrales existentes,
+  y ambos gates pasaron. El modulo nuevo `instrument.ts` esta incluido en el
+  alcance del frontend, aunque el envio se verifica con navegador y no con los
+  unitarios en Node. Un receptor temporal comprobo que backend arranca sin DSN
+  y no emite eventos, y con DSN genera el error 500 y transacciones nombradas
+  para `/api/products`, `/api/dashboard`, `/api/suppliers` y `/health`.
+  Probamos el build del frontend con `/api`, igual que en Docker, usando
+  Playwright/Chromium a 1440x1000 (Browser plugin no disponible y agent-browser
+  ausente). El recorrido fue Inicio -> Productos -> abrir formulario -> cancelar;
+  identidad de pagina correcta, contenido visible, sin overlay, sin errores ni
+  advertencias antes del error intencional y captura revisada fuera de Git.
+  Para probar la activacion exclusiva de PROD se simulo su hostname sirviendo
+  el build local; se interceptaron los envios, sin conectar a la app de PROD ni
+  al Sentry real. Se comprobaron un evento de error y spans de frontend, su
+  etiqueta de entorno y los headers de trazado hacia la API. En localhost la
+  captura quedo desactivada. Estas pruebas no reemplazan ver los datos reales
+  despues del despliegue: faltan cargar `SENTRY_DSN` en Render PROD, integrar el
+  PR, desplegar, observar el error y medir uso/P95 reales. La operacion mas
+  usada, la mas lenta y la tarjeta se registraran con esos datos.
 - **Problemas y uso de IA:** el asistente ayudo a interpretar la consigna,
   revisar la estructura y preparar la configuracion de Dependabot consultando
   la documentacion oficial de GitHub. Verificamos que el YAML se puede leer,
