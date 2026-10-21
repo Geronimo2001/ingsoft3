@@ -1300,3 +1300,35 @@ las aprobaciones de PROD. El asistente verificó la corrida verde posterior, los
 resultados sin flaky, los reportes y preparó el cierre documental y la relación
 tag-commit-imágenes. La publicación del tag y la release se comprueba después
 de que el estudiante confirme el estado Live y complete el cierre indicado.
+
+# Decisiones — TP8 Infraestructura como Codigo
+
+- **Riel y versiones:** Terraform 1.16.6, `kislerdm/neon` 0.18.0 y
+  `render-oss/render` 1.9.1, con `.terraform.lock.hcl` versionado. Declaramos
+  un proyecto, usuario y base propios en Neon y dos servicios gratuitos en
+  Render. Preprod usa las imagenes del commit de `v7.0.0`; las conexiones a la
+  base y a la API se derivan de sus recursos. El estado queda local en `infra/`,
+  fuera de Git, igual que las claves y los planes. QA y PROD no se importaron.
+- **Problemas y soluciones:** Homebrew se bloqueo por las herramientas de Xcode;
+  instalamos el binario oficial ARM64 verificando su SHA-256. Adaptamos la guia
+  a `ConnectionStrings__DefaultConnection`, al health check `/api/products`
+  y a la URL de Nginx sin barra final. En el drift, la base reaparecio antes del
+  apply (`DATABASE_ALREADY_EXISTS`), coincidiendo con un reinicio de la API:
+  `EnsureCreated()` puede recrearla. Recuperamos su correlacion con import,
+  solo en preprod, y repetimos el ejercicio con su API pausada. Al recrear el
+  entorno cambiaron IDs y URLs; se usaron los outputs nuevos y se esperaron
+  respuestas HTTP correctas, incluso despues de que Render marcara Live.
+- **Uso de IA y verificacion:** el asistente ayudo a interpretar la consigna,
+  escribir HCL, ejecutar los ensayos y documentarlos; el estudiante cargo las
+  claves localmente. Verificamos fmt/validate, planes, despliegues Live y las
+  seis pruebas existentes de integracion/navegador contra preprod, aprobadas.
+  Comprobamos idempotencia, drift detectado y reparado, una base no declarada
+  invisible al plan, y el rechazo de `prevent_destroy`. Se hicieron dos ciclos
+  destroy/apply con los mismos archivos e imagenes; se comprobo la ausencia en
+  ambos proveedores al destruir y la app funcionando al recrear. QA/PROD
+  conservaron su configuracion y respondieron por HTTP. Preprod quedo destruido
+  al terminar, listo para la defensa. El procedimiento esta en `infra/README.md`.
+
+Version de entrega: [v8.0.0](https://github.com/Geronimo2001/ingsoft3/releases/tag/v8.0.0),
+con la infraestructura integrada mediante PR a `main`. El workflow del TP7 se
+conserva; el plan de IaC en cada PR es opcional y no se agrego en esta entrega.

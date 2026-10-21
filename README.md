@@ -152,5 +152,12 @@ npm run build
 - CRUD de proveedores y vista de productos asociados.
 - Mensajes claros de exito y error en la interfaz.
 
+## TP8: preprod con infraestructura como codigo
+
+La carpeta [`infra/`](infra/README.md) declara un entorno nuevo con Terraform:
+base propia en Neon y backend/frontend en Render usando las imagenes del TP7.
+Incluye los pasos de creacion, comprobacion, drift y destruccion. QA y produccion
+conservan su infraestructura y su pipeline del TP7.
+
 [![CI](https://github.com/Geronimo2001/ingsoft3/actions/workflows/ci.yml/badge.svg)](https://github.com/Geronimo2001/ingsoft3/actions/workflows/ci.yml)
 

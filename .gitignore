@@ -21,3 +21,14 @@ ingsoft3-tp01/
 **/coverage/
 **/playwright-report/
 **/test-results/
+
+# TP8: estado y valores privados de Terraform. El lockfile SI se versiona.
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+*.tfplan
+crash.log
+crash.*.log
+infra/.env
