@@ -120,7 +120,7 @@ export function ProductsPage() {
           <p className="eyebrow">Inventario</p>
           <h2>Productos y stock</h2>
         </div>
-        <button onClick={openCreateForm}>Crear producto</button>
+        <button onClick={openCreateForm} disabled>Crear producto</button>
       </div>
 
       <div className="toolbar">
