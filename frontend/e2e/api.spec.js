@@ -1,93 +1,94 @@
-import { randomUUID } from 'node:crypto';
-import { test, expect } from '@playwright/test';
+import { test, expect } from './support/inventory-test.js';
 
-const apiBaseUrl = process.env.API_BASE_URL;
-if (!apiBaseUrl) {
-  throw new Error('Definí API_BASE_URL con la dirección del backend a probar.');
-}
-const apiUrl = (path) => new URL(path, apiBaseUrl).toString();
-
-test('crear un producto, consultarlo y borrarlo en la base real', async ({ request }) => {
-  // Nombre propio de esta ejecución: no usamos ni borramos datos ajenos.
-  const unique = `${Date.now()}-${randomUUID()}`;
-  const name = `TP7 Producto ${unique}`;
-  const sku = `TP7-${unique}`;
-  let supplierId;
+test('crear un producto, consultarlo y borrarlo en la base real', async ({ request, inventory }) => {
+  const { apiUrl, productData } = inventory;
   let productId;
 
-  try {
-    await test.step('Preparar un proveedor propio para el producto', async () => {
-      const response = await request.post(apiUrl('/api/suppliers'), {
-        data: {
-          name: `TP7 Proveedor ${unique}`,
-          contactName: 'Prueba de integración',
-          phone: '',
-          email: ''
-        },
-        timeout: 60_000
-      });
-      if (response.ok()) supplierId = (await response.json()).id;
-      expect(response.status()).toBe(201);
-      expect(supplierId).toEqual(expect.any(Number));
-    });
+  await test.step('POST: crear el producto', async () => {
+    const response = await request.post(apiUrl('/api/products'), { data: productData });
+    expect(response.status()).toBe(201);
+    const product = await response.json();
+    expect(product.id).toEqual(expect.any(Number));
+    productId = product.id;
+  });
 
-    await test.step('POST: crear el producto', async () => {
-      const response = await request.post(apiUrl('/api/products'), {
-        data: {
-          name,
-          sku,
-          category: 'Pruebas TP7',
-          currentStock: 5,
-          minimumStock: 2,
-          price: 100,
-          supplierId
-        }
-      });
-      if (response.ok()) productId = (await response.json()).id;
-      expect(response.status()).toBe(201);
-      expect(productId).toEqual(expect.any(Number));
-    });
+  await test.step('GET: comprobar que los datos quedaron guardados', async () => {
+    const response = await request.get(apiUrl(`/api/products/${productId}`));
+    expect(response.status()).toBe(200);
+    expect(await response.json()).toMatchObject({ id: productId, ...productData });
+  });
 
-    await test.step('GET: comprobar que los datos quedaron guardados', async () => {
-      const response = await request.get(apiUrl(`/api/products/${productId}`));
-      expect(response.status()).toBe(200);
-      expect(await response.json()).toMatchObject({
-        id: productId,
-        name,
-        sku,
-        currentStock: 5,
-        minimumStock: 2,
-        price: 100,
-        supplierId
-      });
-    });
+  await test.step('DELETE y GET: borrar el producto y comprobar que ya no existe', async () => {
+    const deleted = await request.delete(apiUrl(`/api/products/${productId}`));
+    expect(deleted.status()).toBe(204);
+    const missing = await request.get(apiUrl(`/api/products/${productId}`));
+    expect(missing.status()).toBe(404);
+  });
+});
 
-    await test.step('DELETE y GET: borrar el producto y comprobar que ya no existe', async () => {
-      const deleted = await request.delete(apiUrl(`/api/products/${productId}`));
-      expect(deleted.status()).toBe(204);
-      const missing = await request.get(apiUrl(`/api/products/${productId}`));
-      expect(missing.status()).toBe(404);
-      productId = undefined;
+test('rechazar un producto con nombre vacío sin guardarlo', async ({ request, inventory }) => {
+  const { apiUrl, productData, supplierId } = inventory;
+
+  await test.step('Comprobar que el SKU propio todavía no existe', async () => {
+    const response = await request.get(apiUrl('/api/products'), {
+      params: { search: productData.sku }
     });
-  } finally {
-    // También intentamos limpiar si falla una comprobación intermedia.
-    // El proveedor se elimina después del producto por su relación en la base.
-    try {
-      if (productId !== undefined) {
-        const deleted = await request.delete(apiUrl(`/api/products/${productId}`));
-        expect([204, 404]).toContain(deleted.status());
-        const missing = await request.get(apiUrl(`/api/products/${productId}`));
-        expect(missing.status()).toBe(404);
-      }
-    } finally {
-      if (supplierId !== undefined) {
-        await test.step('Limpiar el proveedor y comprobar que desapareció', async () => {
-          const deleted = await request.delete(apiUrl(`/api/suppliers/${supplierId}`));
-          expect(deleted.status()).toBe(204);
-          const missing = await request.get(apiUrl(`/api/suppliers/${supplierId}`));
-          expect(missing.status()).toBe(404);
-        });
-      }
-    }
-  }
+    expect(response.status()).toBe(200);
+    expect(await response.json()).toEqual([]);
+  });
+
+  await test.step('POST inválido: recibir 400 y el mensaje de validación', async () => {
+    const response = await request.post(apiUrl('/api/products'), {
+      data: { ...productData, name: '' }
+    });
+    expect(response.status()).toBe(400);
+    expect(await response.json()).toMatchObject({ message: 'El nombre es obligatorio.' });
+  });
+
+  await test.step('GET: comprobar que el alta rechazada no dejó un producto', async () => {
+    const response = await request.get(apiUrl('/api/products'), {
+      params: { supplierId }
+    });
+    expect(response.status()).toBe(200);
+    expect(await response.json()).toEqual([]);
+  });
+});
+
+test('registrar una entrada y comprobar que el stock quedó guardado', async ({ request, inventory }) => {
+  const { apiUrl, productData, unique } = inventory;
+  let productId;
+
+  await test.step('Crear un producto propio con 5 unidades', async () => {
+    const response = await request.post(apiUrl('/api/products'), { data: productData });
+    expect(response.status()).toBe(201);
+    const product = await response.json();
+    expect(product.id).toEqual(expect.any(Number));
+    productId = product.id;
+    expect(product.currentStock).toBe(5);
+  });
+
+  await test.step('POST: registrar una entrada real de 3 unidades', async () => {
+    const description = `Entrada TP7 ${unique}`;
+    const response = await request.post(apiUrl('/api/stock-movements'), {
+      data: { productId, type: 'Entrada', quantity: 3, description }
+    });
+    expect(response.status()).toBe(201);
+    expect(await response.json()).toMatchObject({
+      productId,
+      type: 'Entrada',
+      quantity: 3,
+      newStock: 8,
+      description
+    });
+  });
+
+  await test.step('GET independiente: comprobar 8 unidades persistidas', async () => {
+    const response = await request.get(apiUrl(`/api/products/${productId}`));
+    expect(response.status()).toBe(200);
+    expect(await response.json()).toMatchObject({
+      id: productId,
+      sku: productData.sku,
+      currentStock: 8
+    });
+  });
 });
