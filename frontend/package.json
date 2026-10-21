@@ -7,6 +7,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:integration": "playwright test e2e/api.spec.js",
+    "test:e2e": "playwright test e2e/productos.spec.js",
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview"

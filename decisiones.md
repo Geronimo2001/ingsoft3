@@ -1089,7 +1089,95 @@ Después de la corrección pasaron los 42 casos unitarios de backend, sin omitid
 con 89,58 % de líneas y 93,18 % de ramas. La primera ejecución local de VSTest
 fue bloqueada por el sandbox al abrir su puerto de comunicación; se repitió con
 el permiso correspondiente y terminó correctamente. Estos unitarios no reemplazan
-la repetición pendiente contra la API real de QA.
+la repetición contra la API real de QA. Después del merge del PR #42,
+el asistente repitió esa integración contra QA: `1 passed` en 7,6 segundos, sin
+reintentos. La corrida [39542121940](https://github.com/Geronimo2001/ingsoft3/actions/runs/39542121940)
+del commit `6e66a16640d32b55050ea27521ade3dd85048ef1` completó construcción,
+publicación, QA y PROD en verde, comprobado por la API de GitHub. El estudiante
+realizó la aprobación de producción.
+
+## Las tres integraciones
+
+La suite ahora prueba alta-consulta-borrado de productos, alta con nombre vacío
+(400 y ningún producto guardado) y entrada de stock de 3 unidades sobre las 5
+iniciales (201 y otra consulta que devuelve 8). Elegimos el movimiento porque es
+una operación diaria del inventario y verifica escritura real a través de
+Npgsql/PostgreSQL, algo que el repositorio simulado del TP5 no comprueba.
+
+El proveedor temporal y la limpieza se comparten en una fixture de Playwright:
+cada caso recibe un proveedor distinto y nombres con hora y UUID. Al terminar,
+también si falla el caso, se buscan únicamente los productos de ese proveedor,
+se eliminan y se comprueba su ausencia. Finalmente se elimina el proveedor y se
+exige 404. La entrada se limpia al eliminar el producto por la relación en cascada
+configurada para movimientos. La suite se ejecutó manualmente desde el asistente
+contra QA y dio `3 passed` en 16,5 segundos, sin reintentos ni omitidos.
+
+Esta integración es amplia: usa la API ya desplegada y su base real, sin navegador
+ni dobles. Comprueba también la configuración del entorno y el acceso a la base;
+depende de su disponibilidad y comparte QA con otras corridas. Una integración
+estrecha podría levantar la API y PostgreSQL descartable en el runner para aislar
+mejor cada ejecución, pero no comprobaría el despliegue público de la misma forma.
+No duplicamos aquí todas las combinaciones y bordes de las reglas del TP5.
+
+## Recorridos con navegador y gate preparados
+
+`frontend/e2e/productos.spec.js` cubre crear y borrar un producto desde la UI,
+rechazar un SKU repetido con su mensaje visible y sin crear otro producto, y
+registrar una entrada cuyo stock persiste al recargar. El SKU repetido permite
+comprobar el rechazo del backend desde la pantalla y verificar que solo existe
+el producto original. El movimiento es la operación diaria elegida para el tercer
+flujo. Los casos usan sus propios datos y la limpieza verificada de la fixture.
+La API se usa para preparar y limpiar; las interacciones probadas pasan por la UI
+y el backend real, sin interceptar ni inventar respuestas.
+
+Buscamos campos por label y botones por rol y nombre, con las acciones de cada
+producto limitadas a su fila por SKU. No usamos sleeps ni selectores basados en
+clases de CSS. Un reintento y los timeouts toleran demoras acotadas; un caso que
+solo pasa al reintentar queda marcado flaky y requiere revisión. No se saltean
+pruebas si QA falla. La verificación local utiliza Playwright del proyecto:
+Browser plugin not available; no se dispone de ese plugin en esta sesión.
+
+El workflow incorpora `integracion` con `needs: deploy-qa`, `e2e` con
+`needs: integracion` y `deploy-prod` con `needs: e2e`. Mantiene la aprobación
+de `production` y las mismas referencias de imágenes de QA. Las suites corren
+después del merge a main, dentro de la misma corrida; en un PR sus dependencias
+quedan salteadas. No se agregan condiciones para ignorar errores en esos jobs.
+
+Los reportes se publican por separado como `playwright-report-integracion` y
+`playwright-report-e2e`, incluso si falla el paso de pruebas, con 30 días de
+retención. El resumen lee el JSON generado por Playwright y muestra passed,
+failed, flaky y skipped. La configuración conserva capturas en fallos y la traza
+del primer reintento. No colocamos todas las reglas en e2e: priorizamos tres
+recorridos críticos, dejando las combinaciones de negocio en los unitarios.
+
+QA es compartido: haremos un merge por vez hasta que terminen integración y e2e.
+Si otra corrida cambia la imagen de QA durante las pruebas, hay que comparar
+horarios y referencias en Events, descartar esa verificación y rechazar la
+promoción vieja si quedó pendiente. El concurrency de PROD no aísla QA ni
+reemplaza esa revisión. No se reejecutan suites antiguas contra un QA que ya corre
+otra versión. Los Events siguen siendo necesarios para comprobar la imagen Live;
+el smoke y estas pruebas no identifican automáticamente el commit en ejecución.
+
+La corrida automática con ambas suites, la demostración de aplicación rota que
+deje integración verde y e2e roja, y el cierre `v7.0.0` siguen pendientes.
+
+La ejecución local contra el frontend público de QA terminó con `3 passed` en
+20,2 segundos, sin flaky ni omitidos. La primera ejecución de desarrollo se
+detuvo al buscar el selector de proveedor por label exacto: el label envolvía
+también las opciones del select. Usamos su rol accesible combobox y nombre
+Proveedor; aplicamos el mismo criterio al tipo de movimiento. Se revisaron el
+snapshot y la traza, sin cambiar el código de la aplicación para resolverlo.
+Ese rojo de preparación del test no es la evidencia de la rotura controlada de
+la app que pide el TP. Después del ajuste se repitieron los tres casos completos.
+Los tiempos de acciones y navegación están acotados a 30 y 60 segundos,
+respectivamente, dentro del límite de 120 segundos del caso.
+
+También pasaron los 20 unitarios de frontend con 78,37 % de líneas y 100 % de
+ramas. Se validaron el YAML, los scripts Bash y la cadena de needs del workflow;
+el script de resumen se ejecutó con el JSON real de Playwright y mostró
+`3 passed, 0 failed, 0 flaky, 0 skipped`. La prueba de integración y la e2e fueron
+ejecuciones manuales contra QA; el comportamiento automático posterior al merge
+todavía debe comprobarse en GitHub Actions.
 
 ## Uso de IA en esta etapa
 
@@ -1100,5 +1188,9 @@ El asistente preparó también la configuración de Playwright y el primer caso 
 integración, verificando descubrimiento, unitarios y build. Tras el rojo compartido
 por el estudiante, revisó la traza y preparó la corrección de la consulta de
 proveedores, con reproducción de la excepción y traducción SQL corregida.
-La declaración se ampliará con las
-otras pruebas y su verificación cuando se implementen.
+El asistente completó las tres integraciones, la fixture de datos y limpieza, los
+tres recorridos con navegador, los jobs y sus resúmenes. Verificó las suites
+contra QA y los unitarios de frontend, y corrigió la búsqueda accesible de los
+selects a partir del reporte. El estudiante realizará el push y creará el PR;
+la ejecución automática, el ejercicio de rotura y la release se documentarán
+cuando se completen.

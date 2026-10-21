@@ -8,11 +8,17 @@ export default defineConfig({
   workers: 1,
   forbidOnly: Boolean(process.env.CI),
   retries: 1,
-  reporter: [['html', { open: 'never' }], ['list']],
+  reporter: [
+    ['html', { open: 'never' }],
+    ['list'],
+    ['json', { outputFile: 'test-results/results.json' }]
+  ],
   use: {
     // La integración usa API_BASE_URL; esta dirección es para el navegador.
     baseURL: process.env.E2E_BASE_URL || 'http://localhost:3000',
     browserName: 'chromium',
+    actionTimeout: 30_000,
+    navigationTimeout: 60_000,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure'
   }
